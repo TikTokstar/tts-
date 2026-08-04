@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Български TTS за TikTok Live</title>
+<style>
+  :root{
+    --bg:#12141a; --panel:#1a1d26; --panel2:#222633; --line:#2e3342;
+    --text:#e8eaf0; --dim:#98a0b3; --accent:#4da3ff; --ok:#3ecf8e;
+    --warn:#f5b942; --err:#ff6b6b; --idle:#6b7280;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:14px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  header{
+    background:var(--panel); border-bottom:1px solid var(--line);
+    padding:14px 20px; position:sticky; top:0; z-index:10;
+  }
+  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+  h1{font-size:16px; margin:0 16px 0 0; font-weight:600; white-space:nowrap}
+  h2{font-size:13px; margin:0 0 12px; color:var(--dim); text-transform:uppercase;
+     letter-spacing:.06em; font-weight:600}
+  main{padding:20px; max-width:1500px; margin:0 auto}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:16px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px}
+  input,select,button{font:inherit; color:var(--text)}
+  input[type=text],input[type=number],select{
+    background:var(--panel2); border:1px solid var(--line); border-radius:6px;
+    padding:8px 10px; min-width:0;
+  }
+  input[type=text]:focus,select:focus,input[type=number]:focus{
+    outline:none; border-color:var(--accent);
+  }
+  button{
+    background:var(--panel2); border:1px solid var(--line); border-radius:6px;
+    padding:8px 14px; cursor:pointer; transition:.12s;
+  }
+  button:hover{background:#2b3040; border-color:#3d4459}
+  button:active{transform:translateY(1px)}
+  button.primary{background:var(--accent); border-color:var(--accent); color:#08101c; font-weight:600}
+  button.primary:hover{filter:brightness(1.1)}
+  button.danger{border-color:#5a3040; color:#ff9d9d}
+  button.on{background:var(--err); border-color:var(--err); color:#fff; font-weight:600}
+  .status{
+    display:inline-flex; align-items:center; gap:8px; padding:6px 14px;
+    border-radius:20px; background:var(--panel2); font-weight:600; white-space:nowrap;
+  }
+  .dot{width:9px; height:9px; border-radius:50%; background:var(--idle); flex:none}
+  .dot.live{background:var(--ok); box-shadow:0 0 0 4px rgba(62,207,142,.18)}
+  .dot.connecting,.dot.reconnecting{background:var(--warn); animation:pulse 1.1s infinite}
+  .dot.waiting{background:var(--warn)}
+  .dot.error{background:var(--err)}
+  .dot.disconnected{background:var(--idle)}
+  @keyframes pulse{50%{opacity:.3}}
+  .hint{color:var(--dim); font-size:12px; margin:6px 0 0}
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block; margin-bottom:6px; color:var(--dim); font-size:12px}
+  .field .wide{width:100%}
+  .inline{display:flex; gap:8px; align-items:center}
+  .inline > input[type=range]{flex:1}
+  .val{min-width:52px; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums}
+  .toggle{
+    display:flex; align-items:center; gap:10px; padding:7px 0;
+    border-bottom:1px solid rgba(255,255,255,.04); cursor:pointer;
+  }
+  .toggle:last-child{border-bottom:none}
+  .toggle input{width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
+  .toggle span{flex:1}
+  .toggle small{display:block; color:var(--dim); font-size:11px}
+  .num{width:82px}
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th{
+    text-align:left; color:var(--dim); font-weight:600; font-size:11px;
+    text-transform:uppercase; letter-spacing:.05em; padding:6px 8px;
+    border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel);
+  }
+  td{padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:top}
+  .tag{
+    display:inline-block; padding:1px 7px; border-radius:4px; font-size:11px;
+    background:var(--panel2); color:var(--dim); white-space:nowrap;
+  }
+  .tag.ok{background:rgba(62,207,142,.15); color:var(--ok)}
+  .tag.no{background:rgba(150,160,180,.12); color:var(--dim)}
+  .tag.err{background:rgba(255,107,107,.15); color:var(--err)}
+  .tag.cmd{background:rgba(77,163,255,.15); color:var(--accent)}
+  .arrow{color:var(--dim)}
+  .mono{font-family:Consolas,"Courier New",monospace}
+  .stats{display:flex; gap:18px; flex-wrap:wrap; color:var(--dim); font-size:12px}
+  .stats b{color:var(--text); font-weight:600}
+  #toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--panel2); border:1px solid var(--line); border-radius:8px;
+    padding:10px 18px; opacity:0; pointer-events:none; transition:.25s; z-index:50;
+  }
+  #toast.show{opacity:1}
+  #toast.bad{border-color:var(--err); color:#ffc9c9}
+  .scroll{max-height:460px; overflow:auto}
+  .grow{flex:1; min-width:20px}
+  /* Бутоните за управление се пренасят като група, а не един по един. */
+  .controls{display:flex; gap:8px; flex:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="row">
+    <h1>🎙️ Български TTS · TikTok Live</h1>
+    <span class="status"><span class="dot" id="dot"></span><span id="statusLabel">Готов</span></span>
+    <input type="text" id="username" placeholder="@твоят_потребител или адрес на профила" style="width:320px">
+    <button class="primary" id="btnConnect">Свържи</button>
+    <button id="btnDisconnect">Прекъсни</button>
+    <span class="grow"></span>
+    <span class="controls">
+      <button id="btnSkip">⏭ Пропусни</button>
+      <button id="btnClear">🗑 Изчисти опашката</button>
+      <button id="btnMute">🔇 Заглуши</button>
+    </span>
+  </div>
+  <p class="hint" id="statusText">Въведи своя @потребител и натисни „Свържи“.</p>
+</header>
+
+<main>
+  <div class="grid">
+
+    <!-- ЗВУК -->
+    <section class="card">
+      <h2>Звук</h2>
+      <div class="field">
+        <label for="device">Изходно устройство</label>
+        <select id="device" class="wide"></select>
+        <p class="hint">Избери Voicemeeter, за да пуснеш гласа в streamа.</p>
+      </div>
+      <div class="field">
+        <label>Сила на звука</label>
+        <div class="inline">
+          <input type="range" id="volume" min="0" max="200" step="5" value="100">
+          <span class="val" id="volumeVal">100%</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Скорост на говора (върху всички гласове)</label>
+        <div class="inline">
+          <input type="range" id="speed" min="-50" max="100" step="5" value="0">
+          <span class="val" id="speedVal">+0%</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ГЛАСОВЕ -->
+    <section class="card">
+      <h2>Гласове</h2>
+      <div class="field">
+        <label for="voice">Пресет за проба</label>
+        <div class="inline">
+          <select id="voice" class="grow"></select>
+          <button id="btnTest">▶ Пробвай</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="testText">Текст за пробата (по избор)</label>
+        <input type="text" id="testText" class="wide" placeholder="Здравей! Това е пробен глас.">
+      </div>
+      <div class="field">
+        <label for="override">Наложи един глас на всички</label>
+        <select id="override" class="wide">
+          <option value="">— всеки зрител със своя глас —</option>
+        </select>
+        <p class="hint">Зрителите избират сами с <span class="mono">!glas 3</span> в чата.</p>
+      </div>
+      <button id="btnForget" class="danger">Изчисти запомнените гласове</button>
+    </section>
+
+    <!-- МОДЕРАЦИЯ -->
+    <section class="card">
+      <h2>Модерация</h2>
+      <div class="field inline">
+        <label style="margin:0; flex:1">Максимална дължина</label>
+        <input type="number" class="num" id="max_length" min="0" max="1000" step="10">
+      </div>
+      <div class="field inline">
+        <label style="margin:0; flex:1">Изчакване на зрител (сек)</label>
+        <input type="number" class="num" id="user_cooldown" min="0" max="120" step="1">
+      </div>
+      <div class="field inline">
+        <label style="margin:0; flex:1">Съобщения за минута</label>
+        <input type="number" class="num" id="rate_limit_per_min" min="0" max="200" step="1">
+      </div>
+      <div class="field inline">
+        <label style="margin:0; flex:1">Повторения в рамките на (сек)</label>
+        <input type="number" class="num" id="duplicate_window" min="0" max="600" step="5">
+      </div>
+      <div class="field inline">
+        <label style="margin:0; flex:1">Дължина на опашката</label>
+        <input type="number" class="num" id="queue_max" min="1" max="100" step="1">
+      </div>
+
+      <label class="toggle"><input type="checkbox" id="drop_emoji_only">
+        <span>Пропускай съобщения само с емоджи</span></label>
+      <label class="toggle"><input type="checkbox" id="drop_link_only">
+        <span>Пропускай съобщения само с линк</span></label>
+      <label class="toggle"><input type="checkbox" id="only_followers">
+        <span>Само последователи<small>изключено по подразбиране</small></span></label>
+      <label class="toggle"><input type="checkbox" id="only_gifters">
+        <span>Само дарители<small>изключено по подразбиране</small></span></label>
+      <label class="toggle"><input type="checkbox" id="trigger_prefix_enabled">
+        <span>Само съобщения с префикс<small>иначе се чете ВСИЧКО</small></span></label>
+      <div class="field inline" style="margin-top:10px">
+        <label style="margin:0; flex:1">Префикс</label>
+        <input type="text" class="num" id="trigger_prefix" style="width:100px">
+      </div>
+      <label class="toggle"><input type="checkbox" id="read_username">
+        <span>Чети и името на зрителя</span></label>
+    </section>
+
+    <!-- ТЕКСТ -->
+    <section class="card">
+      <h2>Обработка на текста</h2>
+      <div class="field">
+        <label for="emoji_mode">Емоджита</label>
+        <select id="emoji_mode" class="wide">
+          <option value="drop">пропускай ги</option>
+          <option value="name">чети имената им</option>
+          <option value="keep">остави ги както са</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="mention_mode">Споменавания (@име)</label>
+        <select id="mention_mode" class="wide">
+          <option value="read">чети името</option>
+          <option value="drop">пропускай ги</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="url_word">Линковете се четат като</label>
+        <input type="text" id="url_word" class="wide">
+      </div>
+      <label class="toggle"><input type="checkbox" id="collapse_repeats">
+        <span>Свивай разтеглените букви<small>мнооооого → много</small></span></label>
+      <label class="toggle"><input type="checkbox" id="sticky_per_viewer">
+        <span>Един и същ глас за един и същ зрител</span></label>
+      <label class="toggle"><input type="checkbox" id="allow_chat_command">
+        <span>Позволи <span class="mono">!glas</span> в чата</span></label>
+      <label class="toggle"><input type="checkbox" id="auto_connect">
+        <span>Свързвай се автоматично при пускане</span></label>
+      <div style="margin-top:12px">
+        <button id="btnClearCache">Изчисти кеша със звук</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- СЪОБЩЕНИЯ -->
+  <section class="card" style="margin-top:16px">
+    <div class="row" style="margin-bottom:12px">
+      <h2 style="margin:0">Последни съобщения</h2>
+      <span class="grow"></span>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:70px">час</th>
+            <th style="width:130px">зрител</th>
+            <th>оригинал</th>
+            <th>изговорено</th>
+            <th style="width:110px">глас</th>
+            <th style="width:150px">статус</th>
+          </tr>
+        </thead>
+        <tbody id="messages">
+          <tr><td colspan="6" style="color:var(--dim); padding:20px; text-align:center">
+            Още няма съобщения.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+let CONFIG = {};
+let ready = false;
+
+// --- помощни -------------------------------------------------------------
+
+async function api(path, body) {
+  try {
+    const res = await fetch(path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: {"Content-Type": "application/json"},
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return await res.json();
+  } catch (err) {
+    toast("Няма връзка с бота. Работи ли още?", true);
+    return {ok: false, message: String(err)};
+  }
+}
+
+let toastTimer = null;
+function toast(text, bad) {
+  const el = $("toast");
+  el.textContent = text;
+  el.className = "show" + (bad ? " bad" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ""; }, 3200);
+}
+
+function esc(text) {
+  const d = document.createElement("div");
+  d.textContent = text == null ? "" : String(text);
+  return d.innerHTML;
+}
+
+// --- състояние -----------------------------------------------------------
+
+function applyStatus(status) {
+  if (!status) return;
+  $("dot").className = "dot " + (status.state || "");
+  $("statusLabel").textContent = status.label || "—";
+  if (status.text) $("statusText").textContent = status.text;
+
+  const muted = !!status.muted;
+  const btn = $("btnMute");
+  btn.textContent = muted ? "🔇 Заглушено" : "🔊 Заглуши";
+  btn.className = muted ? "on" : "";
+
+  if (status.username && !$("username").value) $("username").value = "@" + status.username;
+
+  const mod = status.moderation || {};
+  const cache = status.cache || {};
+  $("stats").innerHTML = [
+    `опашка <b>${status.queue ?? 0}</b>`,
+    `прочетени <b>${mod.allowed ?? 0}</b>`,
+    `спрени <b>${mod.dropped ?? 0}</b>`,
+    `грешки <b>${status.errors ?? 0}</b>`,
+    `кеш <b>${cache.files ?? 0}</b> файла (${cache.mb ?? 0} MB)`,
+    `изход <b>${esc(status.device || "—")}</b>`,
+  ].join(" · ");
+}
+
+const STATUS_CLASS = {
+  "прочетено": "ok", "спряно": "no", "грешка": "err", "команда": "cmd",
+};
+
+function renderMessages(records) {
+  const body = $("messages");
+  if (!records.length) {
+    body.innerHTML = '<tr><td colspan="6" style="color:var(--dim);padding:20px;' +
+      'text-align:center">Още няма съобщения.</td></tr>';
+    return;
+  }
+  body.innerHTML = records.map((r) => {
+    const cls = STATUS_CLASS[r.status] || "no";
+    let note = r.status;
+    if (r.reason) note += " · " + r.reason;
+    if (r.detail && r.status === "грешка") note = r.detail;
+    const cached = r.cached ? ' <span class="tag">кеш</span>' : "";
+    const ms = r.latency_ms ? ` <span class="tag">${r.latency_ms} ms</span>` : "";
+    return `<tr>
+      <td class="mono" style="color:var(--dim)">${esc(r.time)}</td>
+      <td>${esc(r.nickname || r.username)}</td>
+      <td>${esc(r.original)}</td>
+      <td>${r.spoken ? '<span class="arrow">→</span> ' + esc(r.spoken) : ""}</td>
+      <td>${esc(r.voice)}</td>
+      <td><span class="tag ${cls}">${esc(note)}</span>${cached}${ms}</td>
+    </tr>`;
+  }).join("");
+}
+
+let recent = [];
+function pushMessage(record) {
+  recent.unshift(record);
+  const cap = (CONFIG.panel && CONFIG.panel.history_size) || 20;
+  if (recent.length > cap) recent.length = cap;
+  renderMessages(recent);
+}
+
+// --- настройки -----------------------------------------------------------
+
+// поле в страницата -> път в config.json
+const FIELDS = {
+  max_length: "moderation.max_length",
+  user_cooldown: "moderation.user_cooldown",
+  rate_limit_per_min: "moderation.rate_limit_per_min",
+  duplicate_window: "moderation.duplicate_window",
+  queue_max: "audio.queue_max",
+  drop_emoji_only: "moderation.drop_emoji_only",
+  drop_link_only: "moderation.drop_link_only",
+  only_followers: "moderation.only_followers",
+  only_gifters: "moderation.only_gifters",
+  trigger_prefix_enabled: "moderation.trigger_prefix_enabled",
+  trigger_prefix: "moderation.trigger_prefix",
+  read_username: "moderation.read_username",
+  emoji_mode: "translit.emoji_mode",
+  mention_mode: "translit.mention_mode",
+  url_word: "translit.url_word",
+  collapse_repeats: "translit.collapse_repeats",
+  sticky_per_viewer: "voice.sticky_per_viewer",
+  allow_chat_command: "voice.allow_chat_command",
+  auto_connect: "tiktok.auto_connect",
+};
+
+function dig(obj, dotted) {
+  return dotted.split(".").reduce((node, key) => (node == null ? node : node[key]), obj);
+}
+
+function fillFields(config) {
+  CONFIG = config;
+  for (const [id, path] of Object.entries(FIELDS)) {
+    const el = $(id);
+    if (!el) continue;
+    const value = dig(config, path);
+    if (value === undefined || value === null) continue;
+    if (el.type === "checkbox") el.checked = !!value;
+    else el.value = value;
+  }
+  const volume = Math.round((dig(config, "audio.volume") ?? 1) * 100);
+  $("volume").value = volume;
+  $("volumeVal").textContent = volume + "%";
+  const speed = dig(config, "voice.rate_offset") ?? 0;
+  $("speed").value = speed;
+  $("speedVal").textContent = (speed >= 0 ? "+" : "") + speed + "%";
+  const user = dig(config, "tiktok.username");
+  if (user && !$("username").value) $("username").value = "@" + user;
+}
+
+function wireFields() {
+  for (const [id, path] of Object.entries(FIELDS)) {
+    const el = $(id);
+    if (!el) continue;
+    const event = (el.type === "checkbox" || el.tagName === "SELECT") ? "change" : "input";
+    let timer = null;
+    el.addEventListener(event, () => {
+      if (!ready) return;
+      let value;
+      if (el.type === "checkbox") value = el.checked;
+      else if (el.type === "number") value = Number(el.value);
+      else value = el.value;
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        await api("/api/config", {[path]: value});
+        toast("Записано.");
+      }, el.type === "text" || el.type === "number" ? 500 : 0);
+    });
+  }
+}
+
+// --- зареждане -----------------------------------------------------------
+
+async function bootstrap() {
+  const data = await api("/api/bootstrap");
+  if (!data || !data.status) return;
+
+  const device = $("device");
+  device.innerHTML = '<option value="">— по подразбиране —</option>' +
+    (data.devices || []).map((d) =>
+      `<option value="${esc(d.name)}">${esc(d.label)}${d.default ? " ★" : ""}</option>`
+    ).join("");
+  const chosen = dig(data.config, "audio.device");
+  if (chosen) device.value = chosen;
+  if (!(data.devices || []).length) {
+    device.innerHTML = '<option value="">— няма намерени устройства —</option>';
+  }
+
+  const options = (data.voices || []).map((v) =>
+    `<option value="${esc(v.id)}">${v.number}. ${esc(v.name)} — ${esc(v.description)}</option>`
+  ).join("");
+  $("voice").innerHTML = options;
+  $("override").innerHTML =
+    '<option value="">— всеки зрител със своя глас —</option>' + options;
+  const override = dig(data.config, "voice.host_override");
+  if (override) $("override").value = override;
+
+  fillFields(data.config);
+  recent = data.history || [];
+  renderMessages(recent);
+  applyStatus(data.status);
+  ready = true;
+}
+
+// --- бутони --------------------------------------------------------------
+
+$("btnConnect").onclick = async () => {
+  const username = $("username").value.trim();
+  if (!username) { toast("Въведи своя @потребител.", true); return; }
+  const res = await api("/api/connect", {username});
+  toast(res.message, !res.ok);
+};
+$("username").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") $("btnConnect").click();
+});
+$("btnDisconnect").onclick = async () => toast((await api("/api/disconnect", {})).message);
+$("btnSkip").onclick = async () => { await api("/api/control/skip", {}); };
+$("btnClear").onclick = async () => toast((await api("/api/control/clear", {})).message);
+$("btnMute").onclick = async () => {
+  const res = await api("/api/control/mute", {});
+  toast(res.message);
+};
+$("btnTest").onclick = async () => {
+  const res = await api("/api/voice/test", {
+    preset: $("voice").value, text: $("testText").value,
+  });
+  toast(res.message, !res.ok);
+};
+$("btnForget").onclick = async () => toast((await api("/api/voice/forget", {})).message);
+$("btnClearCache").onclick = async () => toast((await api("/api/cache/clear", {})).message);
+
+$("override").onchange = async () => {
+  const res = await api("/api/voice/override", {preset: $("override").value});
+  toast(res.message, !res.ok);
+};
+$("device").onchange = async () => {
+  const res = await api("/api/device", {name: $("device").value});
+  toast(res.message, !res.ok);
+};
+$("volume").oninput = () => { $("volumeVal").textContent = $("volume").value + "%"; };
+$("volume").onchange = async () => {
+  await api("/api/volume", {volume: Number($("volume").value) / 100});
+};
+$("speed").oninput = () => {
+  const v = Number($("speed").value);
+  $("speedVal").textContent = (v >= 0 ? "+" : "") + v + "%";
+};
+$("speed").onchange = async () => {
+  await api("/api/speed", {offset: Number($("speed").value)});
+};
+
+// --- живи обновявания ----------------------------------------------------
+
+function connectSocket() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  let socket;
+  try {
+    socket = new WebSocket(`${proto}://${location.host}/ws`);
+  } catch (err) {
+    setTimeout(connectSocket, 2000);
+    return;
+  }
+  socket.onmessage = (event) => {
+    let data;
+    try { data = JSON.parse(event.data); } catch (e) { return; }
+    if (data.kind === "message") pushMessage(data);
+    else if (data.kind === "state") {
+      $("dot").className = "dot " + (data.state || "");
+      $("statusLabel").textContent = data.label || "—";
+      $("statusText").textContent = data.text || "";
+    } else if (data.kind === "hello") applyStatus(data.status);
+    else if (data.kind === "control" && data.action === "mute") {
+      const btn = $("btnMute");
+      btn.textContent = data.muted ? "🔇 Заглушено" : "🔊 Заглуши";
+      btn.className = data.muted ? "on" : "";
+    }
+  };
+  socket.onclose = () => setTimeout(connectSocket, 2000);
+  socket.onerror = () => { try { socket.close(); } catch (e) {} };
+  // тласък, за да не заспива връзката
+  setInterval(() => {
+    if (socket.readyState === 1) { try { socket.send("."); } catch (e) {} }
+  }, 25000);
+}
+
+wireFields();
+bootstrap();
+connectSocket();
+setInterval(async () => {
+  const status = await api("/api/status");
+  if (status && status.label) applyStatus(status);
+}, 3000);
+</script>
+</body>
+</html>

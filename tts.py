@@ -99,6 +99,32 @@ class VoicePreset:
             "available": self.available,
         }
 
+    def with_rate_offset(self, offset_percent: int) -> "VoicePreset":
+        """Пресетът плюс общата скорост от панела.
+
+        Връща КОПИЕ — плъзгачът не бива да променя самия пресет, иначе
+        стойността щеше да се трупа при всяко съобщение.
+        """
+        offset = int(offset_percent or 0)
+        if offset == 0:
+            return self
+        try:
+            base = int(self.rate.rstrip("%"))
+        except (ValueError, AttributeError):
+            base = 0
+        total = max(-90, min(base + offset, 200))
+        clone = VoicePreset(
+            id=self.id,
+            name=self.name,
+            voice=self.voice,
+            rate=f"{'+' if total >= 0 else ''}{total}%",
+            pitch=self.pitch,
+            volume=self.volume,
+            description=self.description,
+            available=self.available,
+        )
+        return clone
+
 
 def _fix_signed(value: str, unit: str, default: str) -> str:
     """'20%' -> '+20%', '-15' -> '-15%', глупости -> подразбиране."""

@@ -294,8 +294,10 @@ class TTSBot:
             )
             return
 
-        # 4. Избор на глас
-        preset = self.pick_preset(message.username)
+        # 4. Избор на глас (плюс общата скорост от панела)
+        preset = self.pick_preset(message.username).with_rate_offset(
+            self.config.get("voice.rate_offset", 0)
+        )
 
         # 5. Име на зрителя отпред (по избор)
         if self.config.get("moderation.read_username", False):
@@ -400,7 +402,9 @@ class TTSBot:
             message, text, reply, "команда", voice=preset.name, reason=command
         )
         try:
-            synth = await self.engine.synthesize(reply, preset)
+            synth = await self.engine.synthesize(
+                reply, preset.with_rate_offset(self.config.get("voice.rate_offset", 0))
+            )
             clip = audio_mod.decode_audio(synth.audio)
             clip.meta = {"username": message.username, "text": reply, "voice": preset.name}
             self.player.enqueue(clip)
@@ -445,6 +449,7 @@ class TTSBot:
         preset = self.roster.resolve(preset_ref) if preset_ref else self.roster.default()
         if preset is None:
             return {"ok": False, "message": f"Няма глас '{preset_ref}'."}
+        preset = preset.with_rate_offset(self.config.get("voice.rate_offset", 0))
         sample = text.strip() or f"Здравей! Това е гласът {preset.name}."
         try:
             synth = await self.engine.synthesize(sample, preset)

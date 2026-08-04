@@ -37,6 +37,7 @@ DEFAULTS: Dict[str, Any] = {
         "allow_chat_command": True,
         "command": "!glas",
         "host_override": None,
+        "rate_offset": 0,
     },
     "audio": {
         "device": "",
