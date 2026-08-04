@@ -1,0 +1,58 @@
+{
+  "tiktok": {
+    "username": "",
+    "auto_connect": false,
+    "retry_seconds": 30
+  },
+  "voice": {
+    "default_preset": "borislav",
+    "sticky_per_viewer": true,
+    "allow_chat_command": true,
+    "command": "!glas",
+    "host_override": null
+  },
+  "audio": {
+    "device": "",
+    "volume": 1.0,
+    "queue_max": 15
+  },
+  "tts": {
+    "cache_enabled": true,
+    "cache_max_mb": 200,
+    "timeout": 12.0,
+    "retries": 1
+  },
+  "translit": {
+    "emoji_mode": "drop",
+    "url_word": "линк",
+    "mention_mode": "read",
+    "collapse_repeats": true
+  },
+  "moderation": {
+    "max_length": 200,
+    "truncate_suffix": "...",
+    "user_cooldown": 8.0,
+    "rate_limit_per_min": 20,
+    "duplicate_window": 30.0,
+    "drop_emoji_only": true,
+    "drop_link_only": true,
+    "blocklist_file": "blocklist.txt",
+    "only_followers": false,
+    "only_gifters": false,
+    "trigger_prefix_enabled": false,
+    "trigger_prefix": "!tts",
+    "read_username": false,
+    "username_template": "{name} казва"
+  },
+  "hotkeys": {
+    "enabled": true,
+    "skip": "<ctrl>+<alt>+s",
+    "mute": "<ctrl>+<alt>+m"
+  },
+  "panel": {
+    "host": "127.0.0.1",
+    "port": 8777,
+    "history_size": 20,
+    "open_browser": true
+  }
+}

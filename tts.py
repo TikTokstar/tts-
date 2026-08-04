@@ -308,7 +308,9 @@ class TTSEngine:
         timeout: float = 12.0,
         retries: int = 1,
     ) -> None:
-        self.roster = roster or VoiceRoster.load()
+        # Изрично с None: VoiceRoster има __len__, значи празен списък с
+        # пресети е "falsy" и `roster or ...` би го подменил мълчаливо.
+        self.roster = roster if roster is not None else VoiceRoster.load()
         self.cache_dir = Path(cache_dir)
         self.cache_max_bytes = max(0, int(cache_max_mb)) * 1024 * 1024
         self.enable_cache = enable_cache
