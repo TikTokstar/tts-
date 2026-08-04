@@ -1,0 +1,22 @@
+# Виртуална среда
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Кешове, които се строят локално
+cache/
+audio_cache/
+
+# Тайни — НИКОГА в git
+.env
+
+# Локално състояние
+voices_state.json
+tts.log
+*.log
