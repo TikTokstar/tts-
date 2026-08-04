@@ -1,0 +1,113 @@
+{
+  "_comment": "Гласови пресети. Български има само 2 неврални гласа, затова разнообразието идва от rate/pitch/volume. Добавяй свои спокойно — 'voice' трябва да е реално име от `edge-tts --list-voices`. Форматите са точно тези на edge-tts: rate/volume в проценти със знак, pitch в Hz със знак.",
+  "presets": [
+    {
+      "id": "borislav",
+      "name": "Борислав",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "volume": "+0%",
+      "description": "Мъжки, нормален — стандартният глас"
+    },
+    {
+      "id": "kalina",
+      "name": "Калина",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "volume": "+0%",
+      "description": "Женски, нормален"
+    },
+    {
+      "id": "dqdoto",
+      "name": "Дядото",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "-15%",
+      "pitch": "-40Hz",
+      "volume": "+0%",
+      "description": "Бавен и много нисък"
+    },
+    {
+      "id": "hamster",
+      "name": "Хамстер",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+25%",
+      "pitch": "+55Hz",
+      "volume": "+0%",
+      "description": "Бърз и писклив"
+    },
+    {
+      "id": "spiker",
+      "name": "Спикер",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "+18%",
+      "pitch": "+10Hz",
+      "volume": "+10%",
+      "description": "Енергичен, като спортен коментатор"
+    },
+    {
+      "id": "piqn",
+      "name": "Пиян",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "-25%",
+      "pitch": "-15Hz",
+      "volume": "+0%",
+      "description": "Провлачен"
+    },
+    {
+      "id": "deteto",
+      "name": "Детето",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+12%",
+      "pitch": "+40Hz",
+      "volume": "+0%",
+      "description": "Детски, високо"
+    },
+    {
+      "id": "babata",
+      "name": "Бабата",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "-20%",
+      "pitch": "-25Hz",
+      "volume": "+0%",
+      "description": "Бавен женски, нисък"
+    },
+    {
+      "id": "gigant",
+      "name": "Гигантът",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "-10%",
+      "pitch": "-50Hz",
+      "volume": "+15%",
+      "description": "Много дълбок и басов"
+    },
+    {
+      "id": "burzaka",
+      "name": "Бързакът",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+40%",
+      "pitch": "+5Hz",
+      "volume": "+0%",
+      "description": "Много бърз — за дълги съобщения"
+    },
+    {
+      "id": "shepot",
+      "name": "Шепот",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "-8%",
+      "pitch": "-10Hz",
+      "volume": "-35%",
+      "description": "Тих и бавен"
+    },
+    {
+      "id": "robot",
+      "name": "Роботът",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "+5%",
+      "pitch": "-30Hz",
+      "volume": "+0%",
+      "description": "Равен и нисък"
+    }
+  ]
+}
