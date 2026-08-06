@@ -1,0 +1,4 @@
+# Зависимости само за резервния източник (bridge/tiktok_bridge.py).
+# Основният път през TikFinity не иска нищо от това.
+TikTokLive>=6.6
+websockets>=14

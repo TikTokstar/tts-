@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Думички - проверка на връзката с чата</title>
+<style>
+  body {
+    margin: 0; padding: 20px;
+    background: #12121a; color: #e8e8f0;
+    font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .hint { color: #8a8aa0; margin-bottom: 16px; }
+  .hint code { color: #b9b9d0; }
+  #status { padding: 8px 12px; border-radius: 6px; margin-bottom: 14px; font-weight: 600; }
+  .connecting { background: #4a3f10; color: #ffd84d; }
+  .connected  { background: #14401f; color: #6ee787; }
+  .disconnected, .error, .reconnecting { background: #45161a; color: #ff8a8a; }
+  #round { background: #1c1c28; border-radius: 8px; padding: 12px; margin-bottom: 14px; }
+  .letters { font-size: 26px; letter-spacing: 8px; font-weight: 700; color: #ffd84d; }
+  .target { display: inline-block; margin: 3px 6px 3px 0; padding: 3px 9px;
+            background: #2a2a3c; border-radius: 4px; color: #9a9ab5; }
+  .target.found { background: #14401f; color: #6ee787; }
+  #log { background: #1c1c28; border-radius: 8px; padding: 8px 12px;
+         max-height: 44vh; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 13px; }
+  .row { padding: 3px 0; border-bottom: 1px solid #26263a; }
+  .row .who { color: #7aa2ff; }
+  .row.hit { color: #6ee787; font-weight: 600; }
+  .row.dup { color: #6a6a80; }
+  #stats { color: #8a8aa0; margin-top: 10px; }
+  input { background: #1c1c28; border: 1px solid #33334a; color: #e8e8f0;
+          padding: 7px 10px; border-radius: 6px; width: 260px; }
+</style>
+</head>
+<body>
+
+<h1>Проверка на връзката с чата</h1>
+<p class="hint">
+  Източник се избира с <code>?source=tikfinity</code>, <code>?source=tiktoklive</code>
+  или <code>?source=mock</code>. Добави <code>&amp;debug=1</code>, за да видиш суровите
+  кадри в конзолата — така се проверява дали схемата на TikFinity съвпада.
+</p>
+
+<div id="status" class="connecting">изчаква</div>
+
+<div id="round">
+  <div class="letters" id="letters"></div>
+  <div id="targets"></div>
+</div>
+
+<div>
+  <input id="manual" placeholder="напиши догадка и Enter">
+</div>
+
+<div id="log"></div>
+<div id="stats"></div>
+
+<script src="data/dictionary.js"></script>
+<script src="js/core/normalize.js"></script>
+<script src="js/core/shlyokavitsa.js"></script>
+<script src="js/core/dictionary.js"></script>
+<script src="js/core/stack.js"></script>
+<script src="js/core/round.js"></script>
+<script src="js/chat/chat.js"></script>
+<script src="js/chat/adapter-tikfinity.js"></script>
+<script src="js/chat/adapter-tiktoklive.js"></script>
+<script src="js/chat/adapter-mock.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var params = new URLSearchParams(location.search);
+  var source = params.get("source") || "mock";
+  var debug = params.get("debug") === "1";
+
+  var dict = new Dumichki.Dictionary(DUMICHKI_DATA);
+  var round = Dumichki.Round.createRound(dict, {});
+
+  document.getElementById("letters").textContent = round.letters.join(" ").toUpperCase();
+
+  function drawTargets() {
+    document.getElementById("targets").innerHTML = round.targets.map(function (word) {
+      var found = round.found.has(word);
+      return '<span class="target' + (found ? " found" : "") + '">' +
+        (found ? word + " — " + round.found.get(word) : word) + "</span>";
+    }).join("");
+  }
+  drawTargets();
+
+  var logEl = document.getElementById("log");
+  var shown = 0;
+
+  function log(text, cls) {
+    var row = document.createElement("div");
+    row.className = "row " + (cls || "");
+    row.innerHTML = text;
+    logEl.insertBefore(row, logEl.firstChild);
+    if (++shown > 120) { logEl.removeChild(logEl.lastChild); }
+  }
+
+  var config = {
+    source: source,
+    debug: debug,
+    // Мнимият чат пита какво още се търси, за да има какво да познава.
+    mockWords: function () { return Dumichki.Round.remaining(round); }
+  };
+  // Портът и хостът се сменят от URL-а - за тестове срещу друг сървър.
+  if (params.get("port")) { config.port = Number(params.get("port")); }
+  if (params.get("host")) { config.host = params.get("host"); }
+
+  var chat = Dumichki.Chat.create(config);
+
+  chat.on("status", function (event) {
+    var el = document.getElementById("status");
+    el.className = event.state;
+    el.textContent = event.state + " — " + event.source +
+      (event.detail ? " (" + event.detail + ")" : "");
+  });
+
+  chat.on("message", function (event) {
+    // Стъпка 3 иска коментарите в конзолата - ето ги.
+    console.log("[коментар] " + event.user + ": " + event.message);
+
+    var hit = Dumichki.Round.matchGuess(round, event.message);
+    if (hit) {
+      Dumichki.Round.reveal(round, hit.word, event.user);
+      drawTargets();
+      log('<span class="who">' + event.user + "</span>: " + event.message +
+        "  →  <b>" + hit.word + "</b>", "hit");
+      if (Dumichki.Round.isComplete(round)) {
+        log("<b>рундът е завършен</b>", "hit");
+      }
+    } else {
+      log('<span class="who">' + event.user + "</span>: " + event.message);
+    }
+
+    var s = chat.stats;
+    document.getElementById("stats").textContent =
+      "получени: " + s.received + "   дубликати: " + s.duplicates +
+      "   свързвания: " + s.connects +
+      "   намерени: " + round.found.size + "/" + round.targets.length;
+  });
+
+  document.getElementById("manual").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && this.value.trim()) {
+      chat.say("ти", this.value.trim());
+      this.value = "";
+    }
+  });
+
+  chat.connect();
+
+  // За ръчна проверка от конзолата на browser source-а.
+  window.chat = chat;
+  window.round = round;
+})();
+</script>
+</body>
+</html>
