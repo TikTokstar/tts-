@@ -30,16 +30,24 @@
   #stats { color: #8a8aa0; margin-top: 10px; }
   input { background: #1c1c28; border: 1px solid #33334a; color: #e8e8f0;
           padding: 7px 10px; border-radius: 6px; width: 260px; }
+  #picker { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  #picker a {
+    padding: 8px 16px; border-radius: 999px; text-decoration: none;
+    background: #1c1c28; border: 2px solid #33334a; color: #b9b9d0;
+    font-weight: 600; font-size: 14px;
+  }
+  #picker a:hover { border-color: #7aa2ff; color: #e8e8f0; }
+  #picker a.active { background: #14401f; border-color: #6ee787; color: #6ee787; }
 </style>
 </head>
 <body>
 
 <h1>Проверка на връзката с чата</h1>
 <p class="hint">
-  Източник се избира с <code>?source=tikfinity</code>, <code>?source=tiktoklive</code>
-  или <code>?source=mock</code>. Добави <code>&amp;debug=1</code>, за да видиш суровите
-  кадри в конзолата — така се проверява дали схемата на TikFinity съвпада.
+  Избери откъде да чете. Натисни <b>TikFinity</b>, докато стриймът върви, и
+  напиши нещо в чата — ако се появи долу, връзката работи.
 </p>
+<p id="picker"></p>
 
 <div id="status" class="connecting">изчаква</div>
 
@@ -73,6 +81,16 @@
   var params = new URLSearchParams(location.search);
   var source = params.get("source") || "mock";
   var debug = params.get("debug") === "1";
+
+  // Бутони вместо писане на адреси на ръка.
+  document.getElementById("picker").innerHTML = [
+    ["tikfinity", "TikFinity"],
+    ["tiktoklive", "TikTokLive мост"],
+    ["mock", "мним чат"]
+  ].map(function (option) {
+    return '<a href="?source=' + option[0] + '&debug=1"' +
+      (source === option[0] ? ' class="active"' : "") + ">" + option[1] + "</a>";
+  }).join("");
 
   var dict = new Dumichki.Dictionary(DUMICHKI_DATA);
   var round = Dumichki.Round.createRound(dict, {});
