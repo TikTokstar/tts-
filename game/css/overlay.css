@@ -471,6 +471,36 @@ html, body {
   will-change: transform, opacity;
 }
 
+/* Спираща грешка в конфигурацията. По-добре обяснение на екрана, отколкото
+   черен overlay, за който разбираш чак на живо. */
+#fatal {
+  position: absolute;
+  inset: 90px 70px auto 70px;
+  z-index: 70;
+  display: none;
+  padding: 44px 48px;
+  background: rgba(40, 12, 22, 0.97);
+  border: 4px solid var(--hot);
+  border-radius: 28px;
+}
+#fatal.on { display: block; }
+#fatal h1 {
+  font-size: 46px;
+  color: var(--hot);
+  margin-bottom: 24px;
+}
+#fatal p {
+  font-size: 30px;
+  line-height: 1.5;
+  margin-bottom: 18px;
+  white-space: pre-wrap;
+}
+#fatal .hint {
+  margin-top: 28px;
+  font-size: 26px;
+  color: var(--dim);
+}
+
 /* Границите на това, което TikTok закрива - само за нагласяне на кадъра. */
 #safe-area { position: absolute; inset: 0; pointer-events: none; z-index: 60; display: none; }
 #safe-area.on { display: block; }
