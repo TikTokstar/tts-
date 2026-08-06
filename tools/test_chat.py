@@ -250,6 +250,32 @@ async def main():
         if comments:
             print("     напр.  " + comments[0])
 
+        # --- Смяна на източника ------------------------------------------------
+
+        print("\nСмяна на източника")
+        print("-" * 18)
+
+        # Смяната на source трябва да стига - всеки адаптер си знае порта.
+        # Ако конфигурацията закове порт, смяната мълчаливо търси моста на
+        # порта на TikFinity и нищо не работи.
+        ports = await page.evaluate("""
+          ["tikfinity", "tiktoklive"].map(function (name) {
+            var cfg = { source: name, host: "localhost", port: null };
+            return name + "=" + Dumichki.Chat.create(cfg).adapter.url(cfg);
+          })
+        """)
+        check("TikFinity отива на 21213", "21213" in ports[0], ports[0])
+        check("мостът отива на 21214", "21214" in ports[1], ports[1])
+
+        override = await page.evaluate("""
+          (function () {
+            var cfg = { source: "tiktoklive", host: "1.2.3.4", port: 9999 };
+            return Dumichki.Chat.create(cfg).adapter.url(cfg);
+          })()
+        """)
+        check("изричен порт и хост имат предимство",
+              override == "ws://1.2.3.4:9999/", override)
+
         # --- Мнимият чат ------------------------------------------------------
 
         print("\nМним чат (за разработка без стрийм)")
