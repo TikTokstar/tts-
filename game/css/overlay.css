@@ -1,0 +1,545 @@
+/* Думички - вертикален overlay 1080x1920.
+ *
+ * Зоните са премерени спрямо това, което TikTok закрива:
+ *   долните ~480 px  - коментари и бутони
+ *   дясната лента    - профил, сърца, споделяне (горе-долу от 40% до 85%)
+ * Затова нищо важно не слиза под 1440 px и нищо не се лепи за десния ръб
+ * в средната височина.
+ *
+ *   40 - 210     ниво, прогрес, таймер
+ *   250 - 470    стойката
+ *   500 - 1160   слотовете с думите   <- най-важната зона
+ *   1180 - 1260  лента с последните познати
+ *   1280 - 1440  класация
+ *   под 1440     нищо
+ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+#stage {
+  position: absolute;
+  top: 0; left: 0;
+  width: 1080px; height: 1920px;
+  transform-origin: top left;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(900px 700px at 50% 18%, var(--bg-glow) 0%, transparent 62%),
+    radial-gradient(700px 600px at 80% 78%, rgba(255, 77, 109, 0.10) 0%, transparent 60%),
+    var(--bg);
+  overflow: hidden;
+}
+
+/* Леко зърно, за да не изглежда градиентът като найлон. */
+#stage::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: repeating-linear-gradient(
+    0deg, #fff 0 1px, transparent 1px 3px);
+}
+
+/* --- Горе: ниво, прогрес, таймер ---------------------------------------- */
+
+#header {
+  position: absolute;
+  top: 40px; left: 60px; right: 60px;
+  height: 170px;
+}
+
+#level-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+#level-name {
+  font-size: 58px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--accent);
+  text-shadow: 0 0 34px rgba(255, 210, 63, 0.45);
+}
+
+#timer {
+  font-size: 52px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+#timer.low {
+  color: var(--hot);
+  animation: pulse-soft 0.85s ease-in-out infinite;
+}
+
+#progress-track {
+  position: relative;
+  margin-top: 18px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--slot);
+  border: 2px solid var(--slot-edge);
+  overflow: hidden;
+}
+
+#progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 13px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-soft) 100%);
+  box-shadow: 0 0 26px rgba(255, 210, 63, 0.55);
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#progress-label {
+  margin-top: 10px;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--dim);
+}
+
+/* --- Стойката ------------------------------------------------------------ */
+
+#stack {
+  position: absolute;
+  top: 250px; left: 0; right: 0;
+  height: 220px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.tile {
+  width: 124px; height: 138px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 82px;
+  font-weight: 800;
+  color: #241c00;
+  background: linear-gradient(180deg, var(--accent-soft) 0%, var(--accent) 58%, #e0ac1c 100%);
+  border-radius: 22px;
+  box-shadow:
+    0 10px 0 #a97c10,
+    0 16px 34px rgba(0, 0, 0, 0.5),
+    inset 0 3px 0 rgba(255, 255, 255, 0.6);
+  /* Разбъркването мести плочките между тези позиции. */
+  transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+.tile.dimmed {
+  opacity: 0.35;
+  transform: scale(0.94);
+}
+
+/* --- Слотовете с думите -------------------------------------------------- */
+
+/* Дясната колона е оставена празна за брояча на поредицата. */
+#slots {
+  position: absolute;
+  top: 500px; left: 50px; right: 210px;
+  height: 640px;
+  display: flex;
+  flex-direction: column;
+  /* Групите са от три до пет според рунда - центрирането държи блока в
+     средата на екрана, вместо да оставя дупка отдолу. */
+  justify-content: center;
+  gap: 20px;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.group-label {
+  flex: 0 0 104px;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+
+/* Разстоянието между две думи е много по-голямо от това между буквите -
+   иначе "АКО ЕТО КОЕ" се чете като една дума. */
+.group-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 44px;
+}
+
+.word {
+  position: relative;
+  display: flex;
+  gap: 7px;
+}
+
+.box {
+  width: 52px; height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  font-weight: 800;
+  color: transparent;
+  background: var(--slot);
+  border: 2px solid var(--slot-edge);
+  border-radius: 10px;
+}
+
+/* Буква, дадена като намек - видима, но не празнува. */
+.box.hinted {
+  color: var(--dim);
+  border-color: var(--dim);
+  border-style: dashed;
+}
+
+.box.filled {
+  color: #05230f;
+  background: linear-gradient(180deg, #8df0ae 0%, var(--success) 100%);
+  border-color: #2f9c58;
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+}
+
+.box.pop {
+  animation: box-pop 0.42s cubic-bezier(0.3, 1.6, 0.45, 1);
+}
+
+/* Думите, които никой не позна - показват се в края на рунда. */
+.box.missed {
+  color: #6f6a8e;
+  background: #16132c;
+  border-color: #2a2450;
+}
+
+.word-owner {
+  position: absolute;
+  left: 50%;
+  top: -34px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 25px;
+  font-weight: 700;
+  color: var(--success);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  animation: owner-life 3s ease-out forwards;
+  pointer-events: none;
+}
+
+/* --- Броячът на поредицата ----------------------------------------------- */
+
+/* Вдясно от слотовете, но над лентата на TikTok, която тръгва към 40%
+   височина. Не се качва при стойката - там плочките стигат до ръба. */
+#streak {
+  position: absolute;
+  top: 508px; right: 24px;
+  width: 162px;
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.5, 0.5, 1);
+}
+#streak.on { opacity: 1; transform: scale(1); }
+
+#streak-count {
+  font-size: 76px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--hot);
+  text-shadow: 0 0 30px rgba(255, 77, 109, 0.6);
+}
+#streak-label {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--dim);
+}
+#streak.bump #streak-count { animation: streak-bump 0.45s cubic-bezier(0.3, 1.7, 0.4, 1); }
+
+/* --- Лентата с последните познати ---------------------------------------- */
+
+#ticker {
+  position: absolute;
+  top: 1168px; left: 60px; right: 60px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.ticker-item {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 9px 18px;
+  background: var(--panel);
+  border: 2px solid var(--slot-edge);
+  border-radius: 999px;
+  font-size: 25px;
+  white-space: nowrap;
+  animation: ticker-in 0.4s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.ticker-item b { color: var(--success); font-weight: 800; }
+.ticker-item span { color: var(--dim); }
+
+/* --- Класацията по време на игра ----------------------------------------- */
+
+#board {
+  position: absolute;
+  top: 1280px; left: 60px; right: 60px;
+  height: 160px;
+  padding: 16px 26px;
+  background: var(--panel);
+  border: 2px solid var(--slot-edge);
+  border-radius: 24px;
+}
+
+#board-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+
+.board-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font-size: 30px;
+  line-height: 1.42;
+}
+.board-row .pos { width: 40px; font-weight: 800; color: var(--accent); }
+.board-row .who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-row .pts { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* --- Паузата между нивата ------------------------------------------------ */
+
+#intermission {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 150px 70px 0;
+  background:
+    radial-gradient(760px 620px at 50% 30%, rgba(60, 36, 130, 0.96) 0%, rgba(13, 11, 26, 0.98) 62%),
+    rgba(13, 11, 26, 0.97);
+}
+#intermission.on { display: flex; animation: fade-in 0.45s ease; }
+
+/* Всичко освен конфетите стои над тях. */
+#im-headline, #im-level, .im-panel, #im-countdown { position: relative; z-index: 1; }
+
+#im-headline {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 7px;
+  color: var(--dim);
+}
+#im-level {
+  font-size: 104px;
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 0 50px rgba(255, 210, 63, 0.5);
+  margin-bottom: 44px;
+}
+
+.im-panel {
+  width: 100%;
+  padding: 30px 40px 34px;
+  background: rgba(16, 12, 38, 0.9);
+  border: 3px solid var(--slot-edge);
+  border-radius: 30px;
+  margin-bottom: 34px;
+  animation: panel-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Общата класация е тази, за която се играе през цялото време - да личи
+   от пръв поглед коя от двете таблици е тя. */
+.im-panel.second {
+  animation-delay: 0.16s;
+  border-color: rgba(255, 210, 63, 0.55);
+  background: rgba(30, 20, 54, 0.92);
+  box-shadow: 0 0 60px rgba(255, 210, 63, 0.12);
+}
+
+.im-panel h2 {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 5px;
+  color: var(--dim);
+  margin-bottom: 18px;
+}
+.im-panel.second h2 { color: var(--accent); }
+
+.im-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 38px;
+  line-height: 1.62;
+  animation: row-in 0.4s ease backwards;
+}
+.im-row .pos {
+  width: 56px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.im-row .who {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.im-row .pts {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  min-width: 130px;
+  text-align: right;
+}
+.im-row .move {
+  width: 158px;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+.im-row .move.up { color: var(--success); }
+.im-row .move.new { color: var(--hot); }
+.im-row .move.same { color: var(--dim); }
+
+/* Първото място свети малко повече. */
+.im-row.first .who, .im-row.first .pts { color: var(--accent-soft); }
+
+.im-empty {
+  font-size: 30px;
+  color: var(--dim);
+  padding: 10px 0 4px;
+}
+
+#im-countdown {
+  margin-top: 6px;
+  font-size: 33px;
+  font-weight: 700;
+  color: var(--dim);
+}
+#im-countdown b {
+  font-size: 46px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Слоеве за анимации --------------------------------------------------- */
+
+#flyers { position: absolute; inset: 0; pointer-events: none; z-index: 30; }
+
+.flyer {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  font-weight: 800;
+  color: #241c00;
+  background: linear-gradient(180deg, var(--accent-soft) 0%, var(--accent) 100%);
+  border-radius: 14px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+  will-change: transform;
+}
+
+/* Конфетите живеят вътре в паузата и минават ЗАД панелите - иначе точно в
+   момента, в който зрителят търси името си, го закриват. */
+#confetti { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.confetto {
+  position: absolute;
+  width: 16px; height: 26px;
+  border-radius: 3px;
+  will-change: transform, opacity;
+}
+
+/* Границите на това, което TikTok закрива - само за нагласяне на кадъра. */
+#safe-area { position: absolute; inset: 0; pointer-events: none; z-index: 60; display: none; }
+#safe-area.on { display: block; }
+#safe-area .zone {
+  position: absolute;
+  border: 3px dashed rgba(255, 77, 109, 0.75);
+  background: rgba(255, 77, 109, 0.09);
+  color: #ff8a8a;
+  font-size: 24px;
+  font-weight: 700;
+  padding: 8px 14px;
+}
+#safe-area .bottom { left: 0; right: 0; bottom: 0; height: 480px; }
+#safe-area .rail { right: 0; top: 768px; bottom: 288px; width: 190px; }
+
+/* --- Тресене на екрана ---------------------------------------------------- */
+
+#stage.shake { animation: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+
+/* --- Ключови кадри -------------------------------------------------------- */
+
+@keyframes box-pop {
+  0%   { transform: scale(0.55); }
+  55%  { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+@keyframes owner-life {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.8); }
+  12%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.06); }
+  22%  { transform: translateX(-50%) translateY(0) scale(1); }
+  72%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+}
+
+@keyframes streak-bump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.38); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+@keyframes ticker-in {
+  from { opacity: 0; transform: translateX(-22px) scale(0.9); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(46px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateX(-26px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes shake {
+  10%, 90% { transform: var(--stage-scale) translate(-5px, 2px); }
+  20%, 80% { transform: var(--stage-scale) translate(8px, -3px); }
+  30%, 50%, 70% { transform: var(--stage-scale) translate(-12px, 4px); }
+  40%, 60% { transform: var(--stage-scale) translate(12px, -4px); }
+}

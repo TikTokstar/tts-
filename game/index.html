@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Думички</title>
+<link rel="stylesheet" href="css/overlay.css">
+</head>
+<body>
+
+<div id="stage">
+
+  <div id="header">
+    <div id="level-row">
+      <div id="level-name">НИВО 1</div>
+      <div id="timer">1:30</div>
+    </div>
+    <div id="progress-track"><div id="progress-fill"></div></div>
+    <div id="progress-label"></div>
+  </div>
+
+  <div id="stack"></div>
+
+  <div id="streak">
+    <div id="streak-count">0</div>
+    <div id="streak-label">ПОРЕДИЦА</div>
+  </div>
+
+  <div id="slots"></div>
+
+  <div id="ticker"></div>
+
+  <div id="board">
+    <div id="board-title">КЛАСАЦИЯ</div>
+    <div id="board-content"></div>
+  </div>
+
+  <!-- Паузата между нивата -->
+  <section id="intermission">
+    <div id="confetti"></div>
+
+    <div id="im-headline">КРАЙ НА</div>
+    <div id="im-level">НИВО 1</div>
+
+    <div class="im-panel">
+      <h2 id="im-level-title">ТОП 5 ЗА НИВОТО</h2>
+      <div id="im-level-rows"></div>
+    </div>
+
+    <div class="im-panel second">
+      <h2>ОБЩО ОТ НАЧАЛОТО</h2>
+      <div id="im-total-rows"></div>
+    </div>
+
+    <div id="im-countdown">следващо ниво след <b id="im-seconds">10</b></div>
+  </section>
+
+  <div id="flyers"></div>
+
+  <div id="safe-area">
+    <div class="zone bottom">интерфейсът на TikTok</div>
+    <div class="zone rail">лента</div>
+  </div>
+
+</div>
+
+<!-- Данни и ядро -->
+<script src="config.js"></script>
+<script src="data/dictionary.js"></script>
+<script src="js/core/normalize.js"></script>
+<script src="js/core/shlyokavitsa.js"></script>
+<script src="js/core/dictionary.js"></script>
+<script src="js/core/stack.js"></script>
+<script src="js/core/round.js"></script>
+
+<!-- Чат -->
+<script src="js/chat/chat.js"></script>
+<script src="js/chat/adapter-tikfinity.js"></script>
+<script src="js/chat/adapter-tiktoklive.js"></script>
+<script src="js/chat/adapter-mock.js"></script>
+
+<!-- Игра и интерфейс -->
+<script src="js/game/leaderboard.js"></script>
+<script src="js/game/game.js"></script>
+<script src="js/ui/audio.js"></script>
+<script src="js/ui/overlay.js"></script>
+<script src="js/ui/intermission.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var cfg = window.DUMICHKI_CONFIG;
+
+  // Адресът може да пренастрои източника, без да се пипа config.js -
+  // удобно е за проба: index.html?source=mock
+  var params = new URLSearchParams(location.search);
+  ["source", "host"].forEach(function (key) {
+    if (params.get(key)) { cfg.chat[key] = params.get(key); }
+  });
+  if (params.get("port")) { cfg.chat.port = Number(params.get("port")); }
+  if (params.get("debug")) { cfg.chat.debug = true; }
+  if (params.get("safe")) { cfg.showSafeArea = true; }
+  if (params.get("mute")) { cfg.audio.enabled = false; }
+
+  var dict = new Dumichki.Dictionary(DUMICHKI_DATA);
+  var game = new Dumichki.Game(dict, cfg);
+
+  var sounds = new Dumichki.Sounds(cfg).load([
+    "word", "hint", "shuffle", "level-up", "round-end", "round-clear", "countdown"
+  ]);
+
+  new Dumichki.Overlay(game, cfg, sounds).bind();
+  new Dumichki.Intermission(game, cfg, sounds).bind();
+
+  var chat = Dumichki.Chat.create({
+    source: cfg.chat.source,
+    host: cfg.chat.host,
+    port: cfg.chat.port,
+    debug: cfg.chat.debug,
+    // Мнимият чат пита играта какво още се търси.
+    mockWords: function () { return game.remaining(); }
+  });
+
+  chat.on("message", function (event) {
+    game.handleChat(event);
+  });
+
+  chat.on("status", function (event) {
+    console.log("[чат] " + event.state + " — " + event.source +
+      (event.detail ? " (" + event.detail + ")" : ""));
+  });
+
+  game.start();
+  chat.connect();
+
+  // За ръчна проверка от конзолата: chat.say("иван", "яко")
+  window.game = game;
+  window.chat = chat;
+})();
+</script>
+</body>
+</html>

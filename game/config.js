@@ -1,0 +1,86 @@
+/* Настройките на играта.
+ *
+ * Този файл се пипа, останалите - не. След промяна: обнови browser source-а
+ * в OBS (десен бутон → Refresh).
+ */
+window.DUMICHKI_CONFIG = {
+
+  chat: {
+    // "tikfinity" - приложението TikFinity върви локално (основен път)
+    // "tiktoklive" - bridge/tiktok_bridge.py
+    // "mock"      - мним чат, за проба без стрийм
+    source: "mock",
+    host: "localhost",
+    port: 21213,
+    debug: false,
+
+    // Секунди, преди същият зрител да може да познае пак. Без това един
+    // човек с анаграм солвър изяжда целия рунд.
+    cooldown: 8
+  },
+
+  round: {
+    duration: 90,        // секунди на рунд
+    hintAfter: 25,       // секунди без успех до автоматичен намек
+    shuffleEvery: 15,    // секунди между разбъркванията на стойката
+    gap: 5               // секунди след рунда - показват се пропуснатите думи
+  },
+
+  level: {
+    baseThreshold: 800,     // точки за първото ниво
+    thresholdGrowth: 200,   // с колко расте прагът всяко следващо
+    intermission: 10        // секунди пауза между нивата
+  },
+
+  scoring: {
+    pointsPerLetter: 10,   // базово: дължина × това
+    speedWindow: 5,        // секунди от началото на рунда с бонус
+    speedBonus: 1.5,       // множител в тези секунди
+    streakStep: 0.1,       // + толкова за всяка дума от поредицата
+    streakMax: 2.0,        // таван на множителя
+    streakTimeout: 15      // секунди без успех, след които поредицата пада
+  },
+
+  stack: {
+    seedLengths: [6, 7],   // от колко букви е стойката
+    targetsMin: 10,
+    targetsMax: 14,
+    minPlayable: 10,       // най-малко намираеми чести думи
+    maxPlayable: 40        // най-много; заданието казваше 25, виж README
+  },
+
+  board: {
+    inGame: 3,          // колко се показват по време на игра
+    intermission: 5,    // колко на екрана между нивата
+    ticker: 4           // последни познати думи в лентата
+  },
+
+  audio: {
+    enabled: true,
+    volume: 0.55,
+    folder: "audio/",
+    // Височината се качва с всяка следваща дума от поредицата. Файлът е
+    // един, скоростта на пускане го транспонира.
+    pitchStep: 0.06,
+    pitchMax: 1.9
+  },
+
+  theme: {
+    background: "#0d0b1a",
+    backgroundGlow: "#2a1a5e",
+    text: "#f4f2ff",
+    dim: "#8b86ad",
+    accent: "#ffd23f",       // стойката, нивото
+    accentSoft: "#ffe98a",
+    success: "#4ade80",      // познати думи
+    hot: "#ff4d6d",          // поредица, важни числа
+    slot: "#1c1836",
+    slotEdge: "#332c5c",
+    panel: "rgba(20, 16, 44, 0.82)",
+    font: "'Trebuchet MS', 'Segoe UI', system-ui, sans-serif"
+  },
+
+  // Показва границите, които TikTok закрива с интерфейса си. Пусни го
+  // веднъж, за да нагласиш кадъра, и го изключи.
+  showSafeArea: false
+};

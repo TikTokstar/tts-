@@ -6,3 +6,6 @@ data/source/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Снимките от тестовете се правят наново при всяко пускане.
+tools/screenshots/
