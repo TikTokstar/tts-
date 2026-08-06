@@ -45,6 +45,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE_DIR = os.path.join(ROOT, "data", "source")
 DEFAULT_OUT = os.path.join(ROOT, "data", "words.json")
 DEFAULT_COMMON_OUT = os.path.join(ROOT, "data", "common.json")
+DEFAULT_RUNTIME_OUT = os.path.join(ROOT, "game", "data", "dictionary.js")
 
 # Огледала за hunspell речника. LibreOffice/dictionaries е поддържаното
 # репо на BGoffice речника; останалите са резервни копия на същия източник.
@@ -365,6 +366,60 @@ def download_frequency(offline):
     return None
 
 
+RUNTIME_TEMPLATE = """\
+/* Генериран от tools/build_dictionary.py - не се редактира на ръка.
+ *
+ * Данните са .js, а не .json, нарочно: OBS зарежда browser source през
+ * file://, където fetch() към локален файл се блокира от CORS. Script
+ * таговете не минават през тази проверка.
+ *
+ * Думите са един низ, разделен с интервали, вместо JSON масив - спестява
+ * около 220 KB и се разгъва с един split.
+ *
+ * Речник: %(words_count)d думи с дължина %(min_len)d-%(max_len)d.
+ * Чести:  %(common_count)d думи, подредени по честота.
+ */
+(function (root) {
+  "use strict";
+
+  var DATA = {
+    maxLength: %(max_len)d,
+    minLength: %(min_len)d,
+    words: "%(words)s".split(" "),
+    common: "%(common)s".split(" ")
+  };
+
+  root.DUMICHKI_DATA = DATA;
+  if (typeof module !== "undefined" && module.exports) { module.exports = DATA; }
+})(typeof globalThis !== "undefined" ? globalThis : this);
+"""
+
+
+def write_runtime_bundle(path, words, common, min_len, max_len):
+    """
+    Записва пакета, който играта чете в браузъра.
+
+    Съдържа само думите, които изобщо могат да се съставят от стойката -
+    при стойка от 7 букви 8- и 9-буквените са мъртъв товар. Ако вдигнеш
+    размера на стойката в конфигурацията, пусни скрипта наново с
+    --runtime-max-len.
+    """
+    runtime_words = [w for w in words if len(w) <= max_len]
+    runtime_common = [w for w in common if len(w) <= max_len]
+
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(RUNTIME_TEMPLATE % {
+            "words": " ".join(runtime_words),
+            "common": " ".join(runtime_common),
+            "words_count": len(runtime_words),
+            "common_count": len(runtime_common),
+            "min_len": min_len,
+            "max_len": max_len,
+        })
+    return runtime_words, runtime_common
+
+
 def build_common(freq_path, valid_words, min_len, max_len):
     """
     Пресича честотния списък с разгънатия речник.
@@ -405,6 +460,11 @@ def main():
     parser.add_argument("--out", default=DEFAULT_OUT, help="изходен JSON файл")
     parser.add_argument("--common-out", default=DEFAULT_COMMON_OUT,
                         help="изходен файл за честите думи")
+    parser.add_argument("--runtime-out", default=DEFAULT_RUNTIME_OUT,
+                        help="пакетът, който играта чете в браузъра")
+    parser.add_argument("--runtime-max-len", type=int, default=7,
+                        help="най-дългата дума в runtime пакета; трябва да е "
+                             "поне колкото стойката (по подразбиране 7)")
     parser.add_argument("--offline", action="store_true",
                         help="не сваля нищо, ползва кеша в data/source/")
     parser.add_argument("--no-frequency", action="store_true",
@@ -505,6 +565,12 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(args.common_out)), exist_ok=True)
         with open(args.common_out, "w", encoding="utf-8") as fh:
             json.dump(common, fh, ensure_ascii=False, separators=(",", ":"))
+    runtime_words, runtime_common = write_runtime_bundle(
+        args.runtime_out, result, common, args.min_len, args.runtime_max_len)
+    stats["runtime_думи"] = len(runtime_words)
+    stats["runtime_чести"] = len(runtime_common)
+    stats["runtime_макс_дължина"] = args.runtime_max_len
+
     stats_path = os.path.splitext(args.out)[0] + ".stats.json"
     with open(stats_path, "w", encoding="utf-8") as fh:
         json.dump(stats, fh, ensure_ascii=False, indent=2)
@@ -547,6 +613,10 @@ def main():
     print("\n" + "-" * 52)
     print("ГОДНОСТ ЗА ИГРАТА")
     print("-" * 52)
+    print("Runtime пакет             : %s (%.1f MB)"
+          % (args.runtime_out, os.path.getsize(args.runtime_out) / (1024 * 1024)))
+    print("  думи до %d букви        : %8d" % (args.runtime_max_len, len(runtime_words)))
+    print("  от тях чести            : %8d" % len(runtime_common))
     print("Семена 6-7 букви, чести   : %8d" % (common_by_length[6] + common_by_length[7]))
     print("Семена 6-7 букви, всички  : %8d" % (by_length[6] + by_length[7]))
     print("Находки 3-7 букви, всички : %8d" % sum(by_length[n] for n in range(3, 8)))
