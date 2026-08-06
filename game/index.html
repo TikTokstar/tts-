@@ -66,6 +66,14 @@
 
   <div id="fatal"></div>
 
+  <!-- Показва се само при мним чат, за да не се чуди човек защо някакви
+       непознати имена познават думи сами. Стои в зоната, която TikTok
+       закрива - вижда се при проба, не се вижда на стрийм. -->
+  <div id="demo-badge">
+    МНИМ ЧАТ — за проба.<br>
+    Смени <b>source: "mock"</b> на <b>"tikfinity"</b> в config.js
+  </div>
+
 </div>
 
 <!-- Данни и ядро -->
@@ -140,6 +148,12 @@
     console.log("[чат] " + event.state + " — " + event.source +
       (event.detail ? " (" + event.detail + ")" : ""));
   });
+
+  if (cfg.chat.source === "mock") {
+    document.getElementById("demo-badge").classList.add("on");
+    console.log("[игра] мним чат — зрителите са измислени. " +
+      "Смени source на \"tikfinity\" в config.js за истински чат.");
+  }
 
   game.start();
   chat.connect();
