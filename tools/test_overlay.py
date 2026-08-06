@@ -13,6 +13,7 @@
 import asyncio
 import os
 import sys
+import time
 
 try:
     from playwright.async_api import async_playwright
@@ -52,6 +53,21 @@ def find_chromium():
 async def shot(page, name):
     os.makedirs(SHOTS, exist_ok=True)
     await page.screenshot(path=os.path.join(SHOTS, name))
+
+
+async def wait_until(page, expression, timeout=20):
+    """
+    Чака JS израз да стане истина.
+
+    Нарочно не спим фиксиран брой секунди: продължителностите идват от
+    config.js и всяка промяна там би счупила теста, без нищо да е счупено.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if await page.evaluate(expression):
+            return True
+        await page.wait_for_timeout(100)
+    return False
 
 
 async def main():
@@ -240,12 +256,11 @@ async def main():
           window.game.phase = "playing";
           window.game.endRound("level");
         """)
-        await page.wait_for_timeout(int(4.6 * 1000))
+        reached = await wait_until(page, "window.game.phase === 'intermission'")
 
+        check("играта влиза в пауза", reached)
         check("паузата се показва",
               "on" in await page.evaluate("document.getElementById('intermission').className"))
-        check("играта е в пауза",
-              await page.evaluate("window.game.phase") == "intermission")
 
         level_rows = await page.evaluate(
             "document.querySelectorAll('#im-level-rows .im-row').length")
@@ -272,9 +287,8 @@ async def main():
         print("\nСледващото ниво")
         print("-" * 15)
 
-        await page.wait_for_timeout(int(10.5 * 1000))
-        check("следващото ниво тръгва без намеса",
-              await page.evaluate("window.game.level") == 2,
+        advanced = await wait_until(page, "window.game.level === 2", timeout=30)
+        check("следващото ниво тръгва без намеса", advanced,
               await page.evaluate("window.game.level"))
         check("паузата се скри",
               "on" not in await page.evaluate(
@@ -303,7 +317,8 @@ async def main():
           window.game.phase = "playing";
           window.game.endRound("level");
         """)
-        await page.wait_for_timeout(int(4.8 * 1000))
+        second = await wait_until(page, "window.game.phase === 'intermission'")
+        check("второто класиране се показва", second)
 
         total_text = await page.evaluate(
             "document.getElementById('im-total-rows').textContent")
@@ -325,19 +340,19 @@ async def main():
         print("-" * 19)
 
         # Изчакваме паузата да свърши - в нея играта не приема догадки.
-        for _ in range(60):
-            if await page.evaluate("window.game.phase") == "playing":
-                break
-            await page.wait_for_timeout(500)
         check("играта се върна в рунд след паузата",
-              await page.evaluate("window.game.phase") == "playing")
+              await wait_until(page, "window.game.phase === 'playing'", timeout=30))
 
-        await page.evaluate("window.chat.connect()")
-        found_before = await page.evaluate("window.game.round.found.size")
-        await page.wait_for_timeout(9000)
-        found_after = await page.evaluate("window.game.round.found.size")
-        check("мнимите зрители познават думи", found_after > found_before,
-              "%d → %d" % (found_before, found_after))
+        # Броим през събитието, а не размера на found: ако рундът свърши в
+        # този прозорец, found се нулира и проверката пада без причина.
+        await page.evaluate("""
+          window.foundCount = 0;
+          window.game.on("found", function () { window.foundCount++; });
+          window.chat.connect();
+        """)
+        check("мнимите зрители познават думи",
+              await wait_until(page, "window.foundCount >= 2", timeout=30),
+              await page.evaluate("window.foundCount"))
 
         check("още няма грешки", not errors, errors[:3])
         real_warnings = [w for w in warnings if "favicon" not in w.lower()]
