@@ -478,9 +478,9 @@ html, body {
   will-change: transform, opacity;
 }
 
-/* Надпис "мним чат". Нарочно е под 1440 px - в зоната, която TikTok
-   закрива. Виждаш го, докато пробваш; зрителите не го виждат. */
-#demo-badge {
+/* Бележка за състоянието на чата. Нарочно е под 1440 px - в зоната, която
+   TikTok закрива. Виждаш я, докато нагласяш; зрителите не я виждат. */
+#status-note {
   position: absolute;
   top: 1500px; left: 60px; right: 60px;
   z-index: 50;
@@ -494,8 +494,8 @@ html, body {
   border: 3px dashed var(--slot-edge);
   border-radius: 22px;
 }
-#demo-badge.on { display: block; }
-#demo-badge b { color: var(--accent); }
+#status-note.on { display: block; }
+#status-note b { color: var(--accent); }
 
 /* Спираща грешка в конфигурацията. По-добре обяснение на екрана, отколкото
    черен overlay, за който разбираш чак на живо. */

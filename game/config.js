@@ -9,7 +9,9 @@ window.DUMICHKI_CONFIG = {
     // "tikfinity" - приложението TikFinity върви локално (основен път)
     // "tiktoklive" - bridge/tiktok_bridge.py
     // "mock"      - мним чат, за проба без стрийм
-    source: "mock",
+    //
+    // За проба без да се пипа тук: отвори index.html?source=mock
+    source: "tikfinity",
     host: "localhost",
 
     // Празно значи "портът по подразбиране за избрания източник":

@@ -66,13 +66,10 @@
 
   <div id="fatal"></div>
 
-  <!-- Показва се само при мним чат, за да не се чуди човек защо някакви
-       непознати имена познават думи сами. Стои в зоната, която TikTok
-       закрива - вижда се при проба, не се вижда на стрийм. -->
-  <div id="demo-badge">
-    МНИМ ЧАТ — за проба.<br>
-    Смени <b>source: "mock"</b> на <b>"tikfinity"</b> в config.js
-  </div>
+  <!-- Казва какво става с чата: мним ли е, или няма връзка. Стои в зоната,
+       която TikTok закрива - виждаш го, докато нагласяш, зрителите не.
+       Изчезва, щом връзката се вдигне. -->
+  <div id="status-note"></div>
 
 </div>
 
@@ -144,16 +141,36 @@
     game.handleChat(event);
   });
 
+  // Бележката долу казва защо нищо не се случва - иначе играта изглежда
+  // жива, но мъртва, и се чудиш дали е счупена.
+  var note = document.getElementById("status-note");
+  function showNote(html) {
+    note.innerHTML = html;
+    note.classList.add("on");
+  }
+
+  var isMock = cfg.chat.source === "mock";
+  if (isMock) {
+    showNote('МНИМ ЧАТ — зрителите са измислени.<br>' +
+      'За истински чат смени <b>source</b> на <b>"tikfinity"</b> в config.js');
+    console.log("[игра] мним чат — зрителите са измислени.");
+  }
+
   chat.on("status", function (event) {
     console.log("[чат] " + event.state + " — " + event.source +
       (event.detail ? " (" + event.detail + ")" : ""));
-  });
+    if (isMock) { return; }
 
-  if (cfg.chat.source === "mock") {
-    document.getElementById("demo-badge").classList.add("on");
-    console.log("[игра] мним чат — зрителите са измислени. " +
-      "Смени source на \"tikfinity\" в config.js за истински чат.");
-  }
+    if (event.state === "connected") {
+      note.classList.remove("on");
+    } else if (event.state !== "connecting") {
+      var name = chat.adapter.label || cfg.chat.source;
+      showNote("Няма връзка с <b>" + name + "</b>.<br>" +
+        (cfg.chat.source === "tikfinity"
+          ? "Отворена ли е програмата TikFinity и свързана ли е с акаунта ти?"
+          : "Върви ли мостът bridge/tiktok_bridge.py?"));
+    }
+  });
 
   game.start();
   chat.connect();

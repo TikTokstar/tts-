@@ -276,6 +276,38 @@ async def main():
         check("изричен порт и хост имат предимство",
               override == "ws://1.2.3.4:9999/", override)
 
+        # --- Бележката за състоянието -----------------------------------------
+
+        print("\nБележката за състоянието на чата")
+        print("-" * 32)
+
+        # config.js е с tikfinity по подразбиране. Ако програмата не върви,
+        # играта изглежда жива, но мъртва - трябва да казва защо.
+        game_page = await browser.new_page(viewport={"width": 1080, "height": 1920})
+        game_url = "file://" + os.path.join(ROOT, "game", "index.html")
+        await game_page.goto(game_url + "?mute=1&source=tikfinity&port=21298")
+        await game_page.wait_for_timeout(2500)
+
+        visible = "on" in await game_page.evaluate(
+            "document.getElementById('status-note').className")
+        text = await game_page.evaluate(
+            "document.getElementById('status-note').textContent")
+        check("без връзка се показва бележка", visible, text[:60])
+        check("бележката казва какво да се провери", "TikFinity" in text, text[:80])
+        check("играта пак върви",
+              await game_page.evaluate("window.game.phase") == "playing")
+
+        # А щом връзката се вдигне, бележката изчезва.
+        await game_page.goto(game_url + "?mute=1&source=tikfinity&port=%d" % PORT)
+        connected = await wait_until(game_page, "window.chat.stats.connects > 0")
+        check("връзката се вдига", connected)
+        await game_page.wait_for_timeout(300)
+        check("бележката изчезва при връзка",
+              "on" not in await game_page.evaluate(
+                  "document.getElementById('status-note').className"))
+
+        await game_page.close()
+
         # --- Мнимият чат ------------------------------------------------------
 
         print("\nМним чат (за разработка без стрийм)")
