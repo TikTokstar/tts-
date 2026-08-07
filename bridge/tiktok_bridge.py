@@ -30,16 +30,23 @@ import json
 import sys
 import time
 
-try:
-    from websockets.asyncio.server import serve
-except ImportError:
-    sys.exit("Липсва websockets. Пусни: pip install -r bridge/requirements.txt")
 
-try:
-    from TikTokLive import TikTokLiveClient
-    from TikTokLive.events import CommentEvent, ConnectEvent, DisconnectEvent
-except ImportError:
-    sys.exit("Липсва TikTokLive. Пусни: pip install -r bridge/requirements.txt")
+# Тежките зависимости се внасят чак когато мостът тръгне, а не при внасяне
+# на модула - така extract_comment може да се провери от тестовете, без
+# TikTokLive да е инсталиран.
+def _load_deps():
+    try:
+        from websockets.asyncio.server import serve
+    except ImportError:
+        sys.exit("Липсва websockets. Пусни: pip install -r bridge/requirements.txt")
+
+    try:
+        from TikTokLive import TikTokLiveClient
+        from TikTokLive.events import CommentEvent, ConnectEvent, DisconnectEvent
+    except ImportError:
+        sys.exit("Липсва TikTokLive. Пусни: pip install -r bridge/requirements.txt")
+
+    return serve, TikTokLiveClient, CommentEvent, ConnectEvent, DisconnectEvent
 
 
 class Bridge:
@@ -99,6 +106,8 @@ def extract_comment(event):
 
 
 async def run(username, host, port, verbose):
+    serve, TikTokLiveClient, CommentEvent, ConnectEvent, DisconnectEvent = _load_deps()
+
     bridge = Bridge(verbose=verbose)
     client = TikTokLiveClient(unique_id=username)
 

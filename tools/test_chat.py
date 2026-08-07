@@ -276,6 +276,54 @@ async def main():
         check("изричен порт и хост имат предимство",
               override == "ws://1.2.3.4:9999/", override)
 
+        # --- Мостът и играта говорят ли на един език ---------------------------
+
+        print("\nМостът към играта")
+        print("-" * 17)
+
+        # Кадърът се строи от СЪЩИЯ код, който ползва мостът - иначе двете
+        # страни може тихо да се разминат при промяна в едната.
+        sys.path.insert(0, os.path.join(ROOT, "bridge"))
+        from tiktok_bridge import extract_comment
+
+        class FakeUser:
+            nickname = "Гошо"
+            display_id = "gosho_bg"
+            id = 12345
+
+        class FakeCommon:
+            msg_id = 777
+
+        class FakeEvent:
+            user = FakeUser()
+            common = FakeCommon()
+            comment = "сърце"
+
+        payload = extract_comment(FakeEvent())
+        check("мостът вади името", payload["user"] == "Гошо", payload)
+        check("мостът вади текста", payload["message"] == "сърце", payload)
+        check("мостът вади идентификатор", payload["userId"] == "12345", payload)
+
+        bridge_page = await browser.new_page()
+        bridge_url = "file://" + os.path.join(ROOT, "game", "chat-test.html")
+        await bridge_page.goto(bridge_url + "?source=tiktoklive&port=%d" % PORT)
+        await fake.wait_for_client()
+        await bridge_page.evaluate("""
+          window.got = [];
+          window.chat.on("message", function (e) { window.got.push(e); });
+        """)
+
+        await fake.send_raw({"event": "chat", "data": payload})
+        arrived = await wait_until(bridge_page, "window.got.length >= 1")
+        check("кадърът на моста стига до играта", arrived)
+
+        if arrived:
+            got = await bridge_page.evaluate("window.got[0]")
+            check("името оцелява по пътя", got["user"] == "Гошо", got)
+            check("текстът оцелява по пътя", got["message"] == "сърце", got)
+
+        await bridge_page.close()
+
         # --- Бележката за състоянието -----------------------------------------
 
         print("\nБележката за състоянието на чата")

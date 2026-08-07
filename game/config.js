@@ -11,7 +11,10 @@ window.DUMICHKI_CONFIG = {
     // "mock"      - мним чат, за проба без стрийм
     //
     // За проба без да се пипа тук: отвори index.html?source=mock
-    source: "tikfinity",
+    //
+    // Ползва се мостът, а не TikFinity: локалният WebSocket на TikFinity
+    // го има само в десктоп приложението, не в уеб версията.
+    source: "tiktoklive",
     host: "localhost",
 
     // Празно значи "портът по подразбиране за избрания източник":
