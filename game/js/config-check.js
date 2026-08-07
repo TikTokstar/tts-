@@ -151,12 +151,11 @@
     }
     if (!result.errors.length) { return false; }
 
+    var escapeHtml = root.Dumichki.escapeHtml;
     var box = document.getElementById("fatal");
     box.innerHTML = "<h1>Грешка в config.js</h1>" +
       result.errors.map(function (message) {
-        return "<p>" + String(message).replace(/[&<>]/g, function (ch) {
-          return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch];
-        }) + "</p>";
+        return "<p>" + escapeHtml(message) + "</p>";
       }).join("") +
       "<div class=\"hint\">Поправи файла и обнови browser source-а.</div>";
     box.classList.add("on");

@@ -64,6 +64,7 @@
 <div id="stats"></div>
 
 <script src="data/dictionary.js"></script>
+<script src="js/core/escape.js"></script>
 <script src="js/core/normalize.js"></script>
 <script src="js/core/shlyokavitsa.js"></script>
 <script src="js/core/dictionary.js"></script>
@@ -77,6 +78,10 @@
 <script>
 (function () {
   "use strict";
+
+  // Имената и текстовете идват от чата - непознат човек в интернет. Всичко,
+  // което влиза в HTML, минава оттук.
+  var esc = Dumichki.escapeHtml;
 
   var params = new URLSearchParams(location.search);
   var source = params.get("source") || "mock";
@@ -101,7 +106,8 @@
     document.getElementById("targets").innerHTML = round.targets.map(function (word) {
       var found = round.found.has(word);
       return '<span class="target' + (found ? " found" : "") + '">' +
-        (found ? word + " — " + round.found.get(word) : word) + "</span>";
+        (found ? esc(word) + " — " + esc(round.found.get(word)) : esc(word)) +
+        "</span>";
     }).join("");
   }
   drawTargets();
@@ -144,13 +150,14 @@
     if (hit) {
       Dumichki.Round.reveal(round, hit.word, event.user);
       drawTargets();
-      log('<span class="who">' + event.user + "</span>: " + event.message +
-        "  →  <b>" + hit.word + "</b>", "hit");
+      log('<span class="who">' + esc(event.user) + "</span>: " +
+        esc(event.message) + "  →  <b>" + esc(hit.word) + "</b>", "hit");
       if (Dumichki.Round.isComplete(round)) {
         log("<b>рундът е завършен</b>", "hit");
       }
     } else {
-      log('<span class="who">' + event.user + "</span>: " + event.message);
+      log('<span class="who">' + esc(event.user) + "</span>: " +
+        esc(event.message));
     }
 
     var s = chat.stats;

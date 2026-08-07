@@ -62,9 +62,21 @@
     }
   };
 
+  /*
+   * Обявява промяна в състоянието.
+   *
+   * Грешките се пишат в конзолата пестеливо: ако TikFinity не върви, ще се
+   * къса на всеки няколко секунди с часове наред, а хиляди еднакви реда не
+   * казват нищо повече от първите три - само пречат при търсене на нещо
+   * друго. Бележката на екрана и без това стои през цялото време.
+   */
   Chat.prototype._status = function (state, detail) {
-    if (this.config.debug || state === "error") {
-      console.log("[чат] " + state + (detail ? " - " + detail : ""));
+    var worthLogging = this.config.debug ||
+      (state === "error" && (this.attempt < 3 || this.attempt % 20 === 0));
+
+    if (worthLogging) {
+      console.log("[чат] " + state + (detail ? " - " + detail : "") +
+        (this.attempt > 3 ? "  (опит " + this.attempt + ")" : ""));
     }
     this._emit("status", { state: state, detail: detail || "", source: this.config.source });
   };

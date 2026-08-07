@@ -38,7 +38,13 @@
     this.phaseEndsAt = 0;
     this.roundStartedAt = 0;
     this.nextShuffleAt = 0;
+    this.nextSweepAt = 0;
   }
+
+  // Изтекли cooldown-и се чистят веднъж на толкова. Без това речникът расте
+  // с всеки нов зрител и за няколко часа стрийм става десетки хиляди записа,
+  // от които почти всички са отдавна изтекли.
+  var COOLDOWN_SWEEP_MS = 60000;
 
   // --- Събития --------------------------------------------------------------
 
@@ -158,6 +164,11 @@
   Game.prototype.tick = function () {
     var now = Date.now();
 
+    if (now >= this.nextSweepAt) {
+      this.nextSweepAt = now + COOLDOWN_SWEEP_MS;
+      this.sweepCooldowns(now);
+    }
+
     if (this.phase === "playing") {
       // Поредицата пада, ако дълго няма нов успех - иначе множителят
       // остава качен през цялото затишие.
@@ -205,6 +216,17 @@
       if (left <= 0) {
         this.startLevel(this.level + 1);
       }
+    }
+  };
+
+  /* Изхвърля изтеклите cooldown-и. Стриймът върви с часове. */
+  Game.prototype.sweepCooldowns = function (now) {
+    var expired = [];
+    this.cooldowns.forEach(function (until, key) {
+      if (until <= now) { expired.push(key); }
+    });
+    for (var i = 0; i < expired.length; i++) {
+      this.cooldowns.delete(expired[i]);
     }
   };
 

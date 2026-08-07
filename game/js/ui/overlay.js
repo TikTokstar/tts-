@@ -15,6 +15,8 @@
 
   function el(id) { return document.getElementById(id); }
 
+  var escapeHtml = root.Dumichki.escapeHtml;
+
   function Overlay(game, config, sounds) {
     this.game = game;
     this.cfg = config;
@@ -25,6 +27,8 @@
     this.words = new Map();    // дума → { el, boxes }
     this.tiles = [];
     this.lastStreak = 0;
+    this.lastSeconds = -1;
+    this.lastPoints = -1;
 
     this.applyTheme();
     this.fit();
@@ -123,16 +127,28 @@
     this.setStreak(0);
   };
 
+  /*
+   * Часовникът бие десет пъти в секунда, но екранът се мени най-много
+   * веднъж. Пишем в DOM само при истинска промяна - иначе overlay-ът
+   * прави десет излишни пренареждания в секунда с часове наред.
+   */
   Overlay.prototype.onTick = function (e) {
     var seconds = Math.ceil(e.timeLeft);
-    var timer = el("timer");
-    timer.textContent = Math.floor(seconds / 60) + ":" +
-      ("0" + (seconds % 60)).slice(-2);
-    timer.classList.toggle("low", seconds <= 10);
+    if (seconds !== this.lastSeconds) {
+      this.lastSeconds = seconds;
+      var timer = el("timer");
+      timer.textContent = Math.floor(seconds / 60) + ":" +
+        ("0" + (seconds % 60)).slice(-2);
+      timer.classList.toggle("low", seconds <= 10);
+    }
 
-    el("progress-fill").style.width = (e.progress * 100).toFixed(1) + "%";
-    el("progress-label").textContent =
-      Math.round(e.levelPoints) + " / " + e.threshold + " точки до следващо ниво";
+    var points = Math.round(e.levelPoints);
+    if (points !== this.lastPoints) {
+      this.lastPoints = points;
+      el("progress-fill").style.width = (e.progress * 100).toFixed(1) + "%";
+      el("progress-label").textContent =
+        points + " / " + e.threshold + " точки до следващо ниво";
+    }
   };
 
   // --- Стойката -------------------------------------------------------------
@@ -324,14 +340,27 @@
           fill: "forwards"
         });
 
-        animation.onfinish = function () {
+        /*
+         * Приземяването минава оттук веднъж, без значение кой го извика.
+         *
+         * Нужно е, защото при скрит source (OBS изключва browser source-а
+         * при смяна на сцена) анимациите спират и onfinish не се задейства
+         * никога - буквите увисват в слоя, а слотът остава празен.
+         */
+        var landed = false;
+        function land() {
+          if (landed) { return; }
+          landed = true;
           flyer.remove();
           box.textContent = letter.toUpperCase();
           box.classList.remove("hinted");
           box.classList.add("filled", "pop");
           setTimeout(function () { box.classList.remove("pop"); }, 430);
           if (tile) { tile.classList.remove("dimmed"); }
-        };
+        }
+
+        animation.onfinish = land;
+        setTimeout(land, FLIGHT_MS + index * LETTER_STAGGER + 600);
       })(i);
     }
   };
@@ -370,10 +399,15 @@
 
   // --- Лента и класация ------------------------------------------------------
 
+  /*
+   * Имената идват от чата, тоест от непознат човек в интернет. Всичко,
+   * което влиза в HTML, минава през escapeHtml - зрител с име
+   * <img src=x onerror=...> няма да пусне код в overlay-а.
+   */
   Overlay.prototype.drawTicker = function () {
     el("ticker").innerHTML = this.game.ticker.map(function (item) {
-      return '<div class="ticker-item"><b>' + item.word +
-        '</b><span>' + item.user + "</span></div>";
+      return '<div class="ticker-item"><b>' + escapeHtml(item.word) +
+        '</b><span>' + escapeHtml(item.user) + "</span></div>";
     }).join("");
   };
 
@@ -389,12 +423,5 @@
       '<div class="board-row"><span class="who">пиши в чата, за да влезеш</span></div>';
   };
 
-  function escapeHtml(text) {
-    return String(text).replace(/[&<>"']/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
-    });
-  }
-
   root.Dumichki.Overlay = Overlay;
-  root.Dumichki.escapeHtml = escapeHtml;
 })(typeof globalThis !== "undefined" ? globalThis : this);

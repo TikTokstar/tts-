@@ -209,6 +209,35 @@ async def main():
 
         await shot(page, "03-поредица.png")
 
+        # --- Име от чата не бива да е код --------------------------------------
+
+        print("\nЗлонамерено име от чата")
+        print("-" * 23)
+
+        # Имената идват от непознат човек в интернет и влизат в лентата и в
+        # класацията. Ако не се екранират, зрител с такова име пуска код в
+        # overlay-а насред стрийм.
+        await page.evaluate("""
+          window.injected = false;
+          window.chat.say(
+            '<img src=x onerror="window.injected=true">',
+            window.game.round.targets[3]);
+        """)
+        await page.wait_for_timeout(900)
+
+        check("вграденият код не се изпълнява",
+              not await page.evaluate("window.injected"))
+        check("името се вижда като текст",
+              "<img" in await page.evaluate(
+                  "document.getElementById('ticker').textContent"))
+        check("не се е появил истински таг",
+              await page.evaluate(
+                  "document.querySelectorAll('#ticker img, #board img').length") == 0)
+        check("класацията също е чиста",
+              "<img" in await page.evaluate(
+                  "document.getElementById('board-content').textContent"))
+
+
         # --- Намек и разбъркване ----------------------------------------------
 
         print("\nНамек и разбъркване")

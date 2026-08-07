@@ -9,6 +9,7 @@ var path = require("path");
 var CORE = path.join(__dirname, "..", "game", "js", "core");
 
 var data = require(path.join(__dirname, "..", "game", "data", "dictionary.js"));
+require(path.join(CORE, "escape.js"));
 require(path.join(CORE, "normalize.js"));
 require(path.join(CORE, "shlyokavitsa.js"));
 require(path.join(CORE, "dictionary.js"));
@@ -136,6 +137,38 @@ normCases.forEach(function (pair) {
   check("'" + pair[0] + "' дава '" + pair[1] + "'",
     got.indexOf(pair[1]) !== -1, "получено: " + JSON.stringify(got));
 });
+
+// --- Екраниране -------------------------------------------------------------
+
+section("Екраниране на имена от чата");
+
+var nasty = [
+  ['<img src=x onerror="alert(1)">',
+   "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;"],
+  ["<script>alert(1)</script>",
+   "&lt;script&gt;alert(1)&lt;/script&gt;"],
+  ['" onmouseover="alert(1)',
+   "&quot; onmouseover=&quot;alert(1)"],
+  ["Гошо & Пешо", "Гошо &amp; Пешо"],
+  ["it's", "it&#39;s"]
+];
+
+nasty.forEach(function (pair) {
+  var out = D.escapeHtml(pair[0]);
+  check("'" + pair[0].slice(0, 26) + "' се обезврежда", out === pair[1], out);
+});
+
+// Нито един от опасните знаци не бива да оцелее суров.
+var mixed = D.escapeHtml("<a href='x' onclick=\"y\">&</a>");
+check("нищо суро не остава",
+  !/[<>]/.test(mixed) && mixed.indexOf("'") === -1 && mixed.indexOf('"') === -1,
+  mixed);
+
+check("нормалните имена остават четими",
+  D.escapeHtml("Мария ✨") === "Мария ✨");
+check("празно и липсващо не гърмят",
+  D.escapeHtml("") === "" && D.escapeHtml(null) === "" &&
+  D.escapeHtml(undefined) === "");
 
 // --- Subset търсене ---------------------------------------------------------
 
