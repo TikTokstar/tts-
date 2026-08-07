@@ -71,6 +71,10 @@
        Изчезва, щом връзката се вдигне. -->
   <div id="status-note"></div>
 
+  <!-- Звук вкл./изкл. Стои под 1440 px, в зоната, която TikTok закрива -
+       ти го виждаш и натискаш, зрителите не го виждат. Работи и с M. -->
+  <button id="mute-btn" type="button" title="Звук — клавиш M">🔊</button>
+
 </div>
 
 <!-- Данни и ядро -->
@@ -173,12 +177,49 @@
     }
   });
 
+  /*
+   * Звукът: бутонче долу вдясно плюс клавиш M. Изборът се помни между
+   * презарежданията - иначе всяко обновяване на browser source-а го
+   * връща обратно.
+   */
+  var muteBtn = document.getElementById("mute-btn");
+  var STORE_KEY = "dumichki.audio";
+
+  function applyAudio(on, remember) {
+    sounds.setEnabled(on);
+    muteBtn.textContent = on ? "🔊" : "🔇";
+    muteBtn.classList.toggle("off", !on);
+    muteBtn.title = (on ? "Звукът е включен" : "Звукът е изключен") + " — клавиш M";
+    if (remember) {
+      try { localStorage.setItem(STORE_KEY, on ? "1" : "0"); } catch (err) { /* тихо */ }
+    }
+  }
+
+  // ?mute=1 в адреса е изрична заповед и бие запомненото.
+  var stored = null;
+  if (!params.get("mute")) {
+    try { stored = localStorage.getItem(STORE_KEY); } catch (err) { /* тихо */ }
+  }
+  applyAudio(stored === null ? cfg.audio.enabled : stored === "1", false);
+
+  muteBtn.addEventListener("click", function () {
+    applyAudio(!sounds.enabled, true);
+  });
+
+  document.addEventListener("keydown", function (event) {
+    // Латинско m и кирилско м - и двете, за да не зависи от подредбата.
+    if ("mMмМ".indexOf(event.key) !== -1) {
+      applyAudio(!sounds.enabled, true);
+    }
+  });
+
   game.start();
   chat.connect();
 
   // За ръчна проверка от конзолата: chat.say("иван", "яко")
   window.game = game;
   window.chat = chat;
+  window.dumichkiSounds = sounds;
 })();
 </script>
 </body>

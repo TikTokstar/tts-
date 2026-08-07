@@ -562,6 +562,32 @@ html, body {
 #status-note.on { display: block; }
 #status-note b { color: var(--accent); }
 
+/* Бутонът за звука. Малък и в закритата зона - за теб, не за зрителите. */
+#mute-btn {
+  position: absolute;
+  right: 56px; bottom: 56px;
+  z-index: 55;
+  width: 92px; height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+  background: rgba(20, 16, 44, 0.75);
+  border: 3px solid var(--slot-edge);
+  border-radius: 50%;
+  transition: transform 0.18s cubic-bezier(0.34, 1.5, 0.5, 1),
+              border-color 0.18s ease, opacity 0.18s ease;
+}
+#mute-btn:hover { transform: scale(1.08); border-color: var(--accent); }
+#mute-btn:active { transform: scale(0.94); }
+#mute-btn.off {
+  opacity: 0.55;
+  border-color: var(--hot);
+}
+
 /* Спираща грешка в конфигурацията. По-добре обяснение на екрана, отколкото
    черен overlay, за който разбираш чак на живо. */
 #fatal {

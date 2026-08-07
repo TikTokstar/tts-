@@ -387,6 +387,55 @@ async def main():
         real_warnings = [w for w in warnings if "favicon" not in w.lower()]
         check("няма предупреждения в конзолата", not real_warnings, real_warnings[:3])
 
+
+        # --- Звукът ------------------------------------------------------------
+
+        print("\nБутонът за звука")
+        print("-" * 16)
+
+        btn = await page.evaluate(
+            "document.getElementById('mute-btn').getBoundingClientRect()")
+        check("бутонът е в закритата зона", btn["top"] >= 1440,
+              "стои от %d px" % btn["top"])
+
+        async def sound_on():
+            return await page.evaluate("window.dumichkiSounds.enabled")
+
+        before = await sound_on()
+        await page.click("#mute-btn")
+        await page.wait_for_timeout(200)
+        check("натискането обръща състоянието", await sound_on() != before)
+
+        icon = await page.evaluate("document.getElementById('mute-btn').textContent")
+        check("иконата следва състоянието",
+              icon == ("🔊" if await sound_on() else "🔇"), icon)
+
+        await page.keyboard.press("m")
+        await page.wait_for_timeout(200)
+        check("клавишът M също работи", await sound_on() == before)
+
+        # Изборът трябва да преживее презареждане на browser source-а.
+        want_off = before
+        if await sound_on() != (not want_off):
+            await page.click("#mute-btn")
+            await page.wait_for_timeout(200)
+        state_before_reload = await sound_on()
+
+        # Нарочно БЕЗ ?mute=1: изричното в адреса бие запомненото, тоест
+        # с него в адреса тази проверка не би измервала нищо.
+        await page.goto(PAGE + "?source=mock")
+        await page.wait_for_timeout(1600)
+        check("изборът се помни след презареждане",
+              await sound_on() == state_before_reload,
+              "беше %s, стана %s" % (state_before_reload, await sound_on()))
+
+        # И обратното: ?mute=1 трябва да надделява над запомненото.
+        await page.goto(PAGE + "?source=mock&mute=1")
+        await page.wait_for_timeout(1400)
+        check("?mute=1 в адреса бие запомненото", not await sound_on())
+
+        await page.evaluate("localStorage.removeItem('dumichki.audio')")
+
         await shot(page, "08-игра.png")
         await browser.close()
 

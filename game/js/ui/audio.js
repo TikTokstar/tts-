@@ -16,6 +16,25 @@
     this.missing = {};
   }
 
+  /* Включва или изключва звука. Връща новото състояние. */
+  Sounds.prototype.setEnabled = function (on) {
+    this.enabled = !!on;
+    if (!this.enabled) {
+      // Спираме и това, което свири в момента - иначе последният звук
+      // доиграва след натискането и изглежда, че бутонът не работи.
+      var self = this;
+      Object.keys(this.pool).forEach(function (name) {
+        self.pool[name].items.forEach(function (audio) {
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+          } catch (err) { /* тихо */ }
+        });
+      });
+    }
+    return this.enabled;
+  };
+
   Sounds.prototype.load = function (names) {
     var self = this;
     names.forEach(function (name) {
