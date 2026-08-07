@@ -76,13 +76,14 @@ def write_config(**overrides):
     JSON-съвместим, а така не се борим с екраниране на скоби.
     """
     cfg = {
+        "layout": {"mode": "band", "width": 1080, "height": 480, "backdrop": 0.82},
         "chat": {"source": "mock", "host": "localhost", "port": None,
                  "debug": False, "cooldown": 8},
         "round": {"duration": 90, "hintAfter": 25, "shuffleEvery": 15, "gap": 5},
         "level": {"baseThreshold": 800, "thresholdGrowth": 200, "intermission": 10},
         "scoring": {"pointsPerLetter": 10, "speedWindow": 5, "speedBonus": 1.5,
                     "streakStep": 0.1, "streakMax": 2.0, "streakTimeout": 15},
-        "stack": {"seedLengths": [6, 7], "targetsMin": 10, "targetsMax": 14,
+        "stack": {"seedLengths": [6, 7], "targetsMin": 8, "targetsMax": 9,
                   "minPlayable": 10, "maxPlayable": 40,
                   "minVowels": 2, "maxRareLetters": 1},
         "board": {"inGame": 3, "intermission": 5, "ticker": 4},
@@ -158,6 +159,11 @@ async def run():
         check("разменени targetsMin/Max се хващат",
               "on" in await page.evaluate("document.getElementById('fatal').className"))
 
+        await load(page, **{"layout.mode": "лента"})
+        text = await page.evaluate("document.getElementById('fatal').textContent")
+        check("непозната подредба се хваща", "layout.mode" in text, text[:70])
+        check("казва кои са двете", "band" in text and "tall" in text, text[:110])
+
         # --- Съмнителни, но допустими настройки -------------------------------
 
         print("\nПредупреждения")
@@ -180,7 +186,8 @@ async def run():
 
         await load(page, **{"round.duration": 20, "scoring.pointsPerLetter": 3,
                             "scoring.speedWindow": 0, "chat.cooldown": 0,
-                            "board.inGame": 5, "theme.accent": "#00ff88"})
+                            "board.inGame": 5, "theme.accent": "#00ff88",
+                            "layout.mode": "tall", "layout.height": 1920})
         # Начисто: ако мнимият чат е познал дума в тези 1.5 секунди,
         # поредицата тръгва от 2 и множителят разваля сметката за точките.
         await page.evaluate("""
@@ -222,6 +229,13 @@ async def run():
         color = await page.evaluate(
             "getComputedStyle(document.getElementById('level-name')).color")
         check("theme.accent управлява цвета", color == "rgb(0, 255, 136)", color)
+
+        check("layout.mode управлява подредбата",
+              "tall" in await page.evaluate(
+                  "document.getElementById('stage').className"))
+        check("layout.height управлява височината",
+              await page.evaluate(
+                  "document.getElementById('stage').getBoundingClientRect().height") == 1920)
 
         # --- Читавата конфигурация минава чиста --------------------------------
 

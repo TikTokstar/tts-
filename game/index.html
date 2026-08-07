@@ -7,6 +7,7 @@
      конзолата, а точно там се гледа при проверка на чата. -->
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/overlay.css">
+<link rel="stylesheet" href="css/band.css">
 </head>
 <body>
 
@@ -19,14 +20,16 @@
     </div>
     <div id="progress-track"><div id="progress-fill"></div></div>
     <div id="progress-label"></div>
+
+    <!-- Вътре в челото, защото в лентата стои на един ред с таймера.
+         При цял екран е абсолютно позициониран и мястото му не се мени. -->
+    <div id="streak">
+      <div id="streak-count">0</div>
+      <div id="streak-label">ПОРЕДИЦА</div>
+    </div>
   </div>
 
   <div id="stack"></div>
-
-  <div id="streak">
-    <div id="streak-count">0</div>
-    <div id="streak-label">ПОРЕДИЦА</div>
-  </div>
 
   <div id="slots"></div>
 
@@ -44,14 +47,18 @@
     <div id="im-headline">КРАЙ НА</div>
     <div id="im-level">НИВО 1</div>
 
-    <div class="im-panel">
-      <h2 id="im-level-title">ТОП 5 ЗА НИВОТО</h2>
-      <div id="im-level-rows"></div>
-    </div>
+    <!-- Обвивката е нужна само на лентата: там двете класации стоят една
+         до друга. При цял екран тя е прозрачна за оформлението. -->
+    <div class="im-panels">
+      <div class="im-panel">
+        <h2 id="im-level-title">ТОП 5 ЗА НИВОТО</h2>
+        <div id="im-level-rows"></div>
+      </div>
 
-    <div class="im-panel second">
-      <h2>ОБЩО ОТ НАЧАЛОТО</h2>
-      <div id="im-total-rows"></div>
+      <div class="im-panel second">
+        <h2>ОБЩО ОТ НАЧАЛОТО</h2>
+        <div id="im-total-rows"></div>
+      </div>
     </div>
 
     <div id="im-countdown">следващо ниво след <b id="im-seconds">10</b></div>
@@ -114,6 +121,18 @@
     if (params.get(key)) { cfg.chat[key] = params.get(key); }
   });
   if (params.get("port")) { cfg.chat.port = Number(params.get("port")); }
+
+  // Подредбата и размерът също могат да се пробват от адреса, без да се
+  // пипа config.js:  index.html?layout=tall   или   ?h=560
+  if (params.get("layout")) {
+    cfg.layout.mode = params.get("layout");
+    if (cfg.layout.mode === "tall") {
+      cfg.layout.width = 1080;
+      cfg.layout.height = 1920;
+    }
+  }
+  if (params.get("w")) { cfg.layout.width = Number(params.get("w")); }
+  if (params.get("h")) { cfg.layout.height = Number(params.get("h")); }
   if (params.get("debug")) { cfg.chat.debug = true; }
   if (params.get("safe")) { cfg.showSafeArea = true; }
   if (params.get("mute")) { cfg.audio.enabled = false; }
@@ -130,7 +149,8 @@
     "word", "hint", "shuffle", "level-up", "round-end", "round-clear", "countdown"
   ]);
 
-  new Dumichki.Overlay(game, cfg, sounds).bind();
+  var overlay = new Dumichki.Overlay(game, cfg, sounds).bind();
+  var compact = overlay.mode === "band";
   new Dumichki.Intermission(game, cfg, sounds).bind();
 
   var chat = Dumichki.Chat.create({
@@ -156,8 +176,10 @@
 
   var isMock = cfg.chat.source === "mock";
   if (isMock) {
-    showNote('МНИМ ЧАТ — зрителите са измислени.<br>' +
-      'За истински чат пусни <b>2-ПУСНИ-МОСТА.bat</b>, после <b>3-ПУСНИ-ИГРАТА.bat</b>');
+    showNote(compact
+      ? 'ПРОБА — зрителите са измислени'
+      : 'МНИМ ЧАТ — зрителите са измислени.<br>' +
+        'За истински чат пусни <b>2-ПУСНИ-МОСТА.bat</b>, после <b>3-ПУСНИ-ИГРАТА.bat</b>');
     console.log("[игра] мним чат — зрителите са измислени.");
   }
 
@@ -170,10 +192,12 @@
       note.classList.remove("on");
     } else if (event.state !== "connecting") {
       var name = chat.adapter.label || cfg.chat.source;
-      showNote("Няма връзка с <b>" + name + "</b>.<br>" +
-        (cfg.chat.source === "tikfinity"
-          ? "Отворена ли е програмата TikFinity и свързана ли е с акаунта ти?"
-          : "Върви ли мостът bridge/tiktok_bridge.py?"));
+      showNote(compact
+        ? "Няма връзка с <b>" + name + "</b>"
+        : "Няма връзка с <b>" + name + "</b>.<br>" +
+          (cfg.chat.source === "tikfinity"
+            ? "Отворена ли е програмата TikFinity и свързана ли е с акаунта ти?"
+            : "Върви ли мостът bridge/tiktok_bridge.py?"));
     }
   });
 

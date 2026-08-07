@@ -89,27 +89,40 @@
     }
   };
 
-  /* Конфети - само тук, за да не се обезценят. */
+  /*
+   * Конфети - само тук, за да не се обезценят.
+   *
+   * Размерите се четат от сцената, а не са заковани: в лента от 480 px
+   * падане с 1500 px значи, че изчезват, преди да се видят.
+   */
   Intermission.prototype.confetti = function () {
     var layer = el("confetti");
     layer.innerHTML = "";
 
-    for (var i = 0; i < 90; i++) {
+    var stage = el("stage");
+    var width = stage.offsetWidth;
+    var height = stage.offsetHeight;
+    var count = height < 900 ? 45 : 90;   // ниска лента се задръства бързо
+
+    for (var i = 0; i < count; i++) {
       var piece = document.createElement("div");
       piece.className = "confetto";
-      piece.style.left = (Math.random() * 1080) + "px";
+      piece.style.left = (Math.random() * width) + "px";
       piece.style.top = "-40px";
       piece.style.background = COLORS[i % COLORS.length];
       layer.appendChild(piece);
 
-      var drift = (Math.random() - 0.5) * 420;
+      var drift = (Math.random() - 0.5) * width * 0.4;
       var spin = 360 + Math.random() * 900;
+      var fall = height + 80;
 
       piece.animate([
         { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
-        { transform: "translate(" + drift + "px, 1500px) rotate(" + spin + "deg)", opacity: 0.9 }
+        { transform: "translate(" + drift + "px, " + fall + "px) rotate(" +
+            spin + "deg)", opacity: 0.9 }
       ], {
-        duration: 2600 + Math.random() * 1800,
+        // Кратка лента иска и по-кратко падане, иначе конфетите пълзят.
+        duration: (height < 900 ? 1500 : 2600) + Math.random() * 1400,
         delay: Math.random() * 700,
         easing: "cubic-bezier(0.25, 0.6, 0.5, 1)",
         fill: "forwards"

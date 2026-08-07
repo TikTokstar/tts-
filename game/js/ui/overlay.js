@@ -15,6 +15,18 @@
 
   function el(id) { return document.getElementById(id); }
 
+  /* Шестнайсетичен цвят плюс прозрачност. Приема #abc и #aabbcc. */
+  function withAlpha(hex, alpha) {
+    var value = String(hex).replace("#", "");
+    if (value.length === 3) {
+      value = value[0] + value[0] + value[1] + value[1] + value[2] + value[2];
+    }
+    if (value.length !== 6) { return hex; }
+    return "rgba(" + parseInt(value.slice(0, 2), 16) + ", " +
+      parseInt(value.slice(2, 4), 16) + ", " +
+      parseInt(value.slice(4, 6), 16) + ", " + alpha + ")";
+  }
+
   var escapeHtml = root.Dumichki.escapeHtml;
 
   function Overlay(game, config, sounds) {
@@ -23,7 +35,19 @@
     this.sounds = sounds;
     this.scale = 1;
 
+    // Подредбата решава размера на сцената: лента под геймплея или цял
+    // вертикален екран. Всичко останало в този файл е еднакво за двете -
+    // разликите са в CSS.
+    var layout = config.layout || {};
+    this.mode = layout.mode === "tall" ? "tall" : "band";
+    this.width = layout.width || (this.mode === "tall" ? 1080 : 1080);
+    this.height = layout.height || (this.mode === "tall" ? 1920 : 480);
+
     this.stage = el("stage");
+    this.stage.classList.add(this.mode);
+    this.stage.style.width = this.width + "px";
+    this.stage.style.height = this.height + "px";
+
     this.words = new Map();    // дума → { el, boxes }
     this.tiles = [];
     this.lastStreak = 0;
@@ -54,7 +78,17 @@
     css.setProperty("--panel", t.panel);
     css.setProperty("--font", t.font);
 
-    if (this.cfg.showSafeArea) { el("safe-area").classList.add("on"); }
+    // Подложката под лентата: играта стои върху геймплей, не върху нищо.
+    // Смятаме я тук, защото CSS не може да добави прозрачност към готов
+    // шестнайсетичен цвят.
+    var backdrop = this.cfg.layout && this.cfg.layout.backdrop;
+    css.setProperty("--stage-bg",
+      withAlpha(t.background, backdrop === undefined ? 0.82 : backdrop));
+
+    // Зоните на TikTok важат само когато играта е целият екран.
+    if (this.cfg.showSafeArea && this.mode === "tall") {
+      el("safe-area").classList.add("on");
+    }
   };
 
   /*
@@ -62,13 +96,15 @@
    * да се гледа и в обикновен прозорец, без да се разваля оформлението.
    */
   Overlay.prototype.fit = function () {
-    this.scale = Math.min(window.innerWidth / 1080, window.innerHeight / 1920);
+    var w = this.width;
+    var h = this.height;
+    this.scale = Math.min(window.innerWidth / w, window.innerHeight / h);
 
-    // Центрираме останалото място. В OBS мащабът е 1 и отместването е 0;
-    // в обикновен прозорец играта стои в средата, а не залепена вляво с
-    // черна ивица отдясно, която изглежда като счупено.
-    var x = Math.round((window.innerWidth - 1080 * this.scale) / 2);
-    var y = Math.round((window.innerHeight - 1920 * this.scale) / 2);
+    // Центрираме останалото място. Когато browser източникът е с точния
+    // размер, мащабът е 1 и отместването е 0; иначе играта стои в средата,
+    // а не залепена вляво с черна ивица отдясно.
+    var x = Math.round((window.innerWidth - w * this.scale) / 2);
+    var y = Math.round((window.innerHeight - h * this.scale) / 2);
 
     var transform = "translate(" + x + "px, " + y + "px) scale(" + this.scale + ")";
     this.stage.style.setProperty("--stage-scale", transform);
@@ -242,7 +278,9 @@
 
       var label = document.createElement("div");
       label.className = "group-label";
-      label.textContent = length + " букви";
+      // В лентата има място само за числото; кутийките и без това показват
+      // за какво се отнася.
+      label.textContent = self.mode === "band" ? String(length) : length + " букви";
       group.appendChild(label);
 
       var holder = document.createElement("div");

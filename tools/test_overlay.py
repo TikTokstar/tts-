@@ -80,8 +80,8 @@ async def main():
             options["executable_path"] = chromium
         browser = await pw.chromium.launch(**options)
 
-        # Точният размер на browser source-а в OBS.
-        page = await browser.new_page(viewport={"width": 1080, "height": 1920})
+        # Точният размер на лентата - това е подредбата по подразбиране.
+        page = await browser.new_page(viewport={"width": 1080, "height": 480})
 
         errors = []
         warnings = []
@@ -126,22 +126,35 @@ async def main():
         check("думите са групирани по дължина", len(groups) >= 3, groups)
         print("     %s" % ", ".join(groups))
 
-        # Нищо важно не бива да слиза в зоната на TikTok.
-        bottom = await page.evaluate("""
-          Array.from(document.querySelectorAll('#board, #ticker, #slots, #stack, #header'))
-            .map(function (e) { return { id: e.id, bottom: e.getBoundingClientRect().bottom }; })
-        """)
-        deepest = max(item["bottom"] for item in bottom)
-        check("нищо не влиза в долните 25% на екрана", deepest <= 1440,
-              "най-ниското стига до %d px" % deepest)
+        check("подредбата е лента",
+              "band" in await page.evaluate("document.getElementById('stage').className"))
 
-        streak_box = await page.evaluate(
-            "document.getElementById('streak').getBoundingClientRect()")
-        stack_box = await page.evaluate(
-            "document.getElementById('stack').getBoundingClientRect()")
-        check("броячът на поредицата не пада върху стойката",
-              streak_box["top"] >= stack_box["bottom"],
-              "поредица от %d, стойка до %d" % (streak_box["top"], stack_box["bottom"]))
+        # В лента всеки пиксел е зает - нищо не бива да излиза навън.
+        overflow = await page.evaluate("""
+          (function () {
+            var stage = document.getElementById('stage').getBoundingClientRect();
+            var out = [];
+            ['header', 'stack', 'slots', 'board'].forEach(function (id) {
+              var r = document.getElementById(id).getBoundingClientRect();
+              if (r.bottom > stage.bottom + 1 || r.right > stage.right + 1 ||
+                  r.left < stage.left - 1) {
+                out.push(id);
+              }
+            });
+            return out;
+          })()
+        """)
+        check("нищо не излиза извън лентата", not overflow, overflow)
+
+        # Поредицата стои на реда на челото, не върху таймера.
+        collide = await page.evaluate("""
+          (function () {
+            var a = document.getElementById('streak').getBoundingClientRect();
+            var b = document.getElementById('timer').getBoundingClientRect();
+            return !(a.right <= b.left || b.right <= a.left);
+          })()
+        """)
+        check("поредицата не пада върху таймера", not collide)
 
         await shot(page, "01-рунд.png")
 
@@ -393,10 +406,17 @@ async def main():
         print("\nБутонът за звука")
         print("-" * 16)
 
-        btn = await page.evaluate(
-            "document.getElementById('mute-btn').getBoundingClientRect()")
-        check("бутонът е в закритата зона", btn["top"] >= 1440,
-              "стои от %d px" % btn["top"])
+        inside = await page.evaluate("""
+          (function () {
+            var s = document.getElementById('stage').getBoundingClientRect();
+            var b = document.getElementById('mute-btn').getBoundingClientRect();
+            return b.right <= s.right + 1 && b.bottom <= s.bottom + 1;
+          })()
+        """)
+        check("бутонът е вътре в лентата", inside)
+        check("бутонът е блед, за да не личи на стрийма",
+              float(await page.evaluate(
+                  "getComputedStyle(document.getElementById('mute-btn')).opacity")) < 0.6)
 
         async def sound_on():
             return await page.evaluate("window.dumichkiSounds.enabled")
@@ -435,6 +455,55 @@ async def main():
         check("?mute=1 в адреса бие запомненото", not await sound_on())
 
         await page.evaluate("localStorage.removeItem('dumichki.audio')")
+
+
+        # --- Целият екран още работи -------------------------------------------
+
+        print("\nПодредба за цял екран")
+        print("-" * 21)
+
+        tall = await browser.new_page(viewport={"width": 1080, "height": 1920})
+        tall_errors = []
+        tall.on("pageerror", lambda e: tall_errors.append(str(e)))
+        await tall.goto(PAGE + "?source=mock&mute=1&layout=tall")
+        await tall.wait_for_timeout(1800)
+
+        check("зарежда се без грешки", not tall_errors, tall_errors[:2])
+        check("сцената е 1080x1920", await tall.evaluate(
+            "(function(){var r=document.getElementById('stage').getBoundingClientRect();"
+            "return Math.round(r.width) + 'x' + Math.round(r.height);})()") == "1080x1920")
+
+        deepest = await tall.evaluate("""
+          Math.max.apply(null,
+            Array.from(document.querySelectorAll('#board, #ticker, #slots, #stack, #header'))
+              .map(function (e) { return e.getBoundingClientRect().bottom; }))
+        """)
+        check("нищо не влиза в долните 25% на екрана", deepest <= 1440,
+              "най-ниското стига до %d px" % deepest)
+
+        # Тук поредицата е встрани от слотовете, не в челото - трябва да е
+        # под стойката, а не върху нея.
+        gap = await tall.evaluate("""
+          (function () {
+            var a = document.getElementById('streak').getBoundingClientRect();
+            var b = document.getElementById('stack').getBoundingClientRect();
+            return Math.round(a.top - b.bottom);
+          })()
+        """)
+        check("броячът на поредицата не пада върху стойката", gap >= 0,
+              "разлика %d px" % gap)
+
+        btn_top = await tall.evaluate(
+            "document.getElementById('mute-btn').getBoundingClientRect().top")
+        check("бутонът за звука е в закритата зона", btn_top >= 1440,
+              "стои от %d px" % btn_top)
+
+        check("думите пишат и мярката", "букви" in " ".join(await tall.evaluate(
+            "Array.from(document.querySelectorAll('.group-label'))"
+            ".map(function(e){return e.textContent;})")))
+
+        await shot(tall, "09-цял-екран.png")
+        await tall.close()
 
         await shot(page, "08-игра.png")
         await browser.close()

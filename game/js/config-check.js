@@ -30,13 +30,30 @@
     if (!cfg) {
       return { errors: ["config.js не е зареден изобщо."], warnings: [] };
     }
-    var sections = ["chat", "round", "level", "scoring", "stack", "board", "audio", "theme"];
+    var sections = ["layout", "chat", "round", "level", "scoring", "stack",
+                    "board", "audio", "theme"];
     for (var i = 0; i < sections.length; i++) {
       if (!cfg[sections[i]]) {
         errors.push("Липсва раздел \"" + sections[i] + "\" в config.js.");
       }
     }
     if (errors.length) { return { errors: errors, warnings: warnings }; }
+
+    // --- Подредба -------------------------------------------------------------
+
+    need(cfg.layout.mode === "band" || cfg.layout.mode === "tall",
+      "layout.mode е \"" + cfg.layout.mode + "\", а може да бъде само " +
+      "\"band\" (лента под геймплея) или \"tall\" (целият екран).");
+    need(isNumber(cfg.layout.width) && cfg.layout.width >= 400,
+      "layout.width трябва да е число, поне 400.");
+    need(isNumber(cfg.layout.height) && cfg.layout.height >= 240,
+      "layout.height трябва да е число, поне 240.");
+    warn(!(cfg.layout.mode === "band" && cfg.layout.height > 900),
+      "layout.height е " + cfg.layout.height + " при подредба \"band\" - " +
+      "толкова висока лента вероятно иска mode: \"tall\".");
+    warn(!(cfg.layout.mode === "band" && cfg.stack.targetsMax > 10),
+      "stack.targetsMax е " + cfg.stack.targetsMax + " при лента - думите " +
+      "ще станат ситни. За лента 7-9 се чете по-добре.");
 
     // --- Чат ------------------------------------------------------------------
 

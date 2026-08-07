@@ -1,0 +1,280 @@
+/* Подредба "лента" - играта е трето нещо на екрана, под камерата и
+ * геймплея, а не целият екран.
+ *
+ * Тук всичко е на flex, не на точни координати като при високата
+ * подредба. Причината е проста: височината на лентата е настройка, а с
+ * точни координати всяка нейна промяна щеше да иска ново пренареждане.
+ * Слотовете взимат каквото остане.
+ *
+ * Числата са премерени за 1080x480. При по-висока лента слотовете растат
+ * сами; при по-ниска се свиват.
+ */
+
+#stage.band {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 26px 14px;
+  /* Подложка, за да се чете върху какъвто и да е геймплей отзад.
+     Плътността ѝ идва от config.js. */
+  background: var(--stage-bg);
+  border-radius: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+}
+
+/* Сиянието остава, но по-кротко - лентата е ниска и петната биха се
+   набивали повече, отколкото трябва. */
+#stage.band::before { opacity: 0.55; filter: blur(34px); }
+
+/* Без тъмнина по краищата: при ниска лента тя изяжда точно ъглите, в
+   които стоят таймерът и класацията. */
+#stage.band::after {
+  background: repeating-linear-gradient(
+    0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
+}
+
+/* --- Ред 1: ниво, прогрес, поредица, таймер ------------------------------ */
+
+#stage.band #header {
+  position: static;
+  flex: 0 0 auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Обвивката се разтваря, за да могат нивото, прогресът и таймерът да
+   застанат на един ред. Иначе нивото и таймерът остават слепени в своя
+   кутия и челото се пречупва на два реда. */
+#stage.band #level-row { display: contents; }
+
+#stage.band #level-name {
+  order: 1;
+  flex: 0 0 auto;
+  font-size: 30px;
+  letter-spacing: 1px;
+}
+#stage.band #timer {
+  order: 3;
+  flex: 0 0 auto;
+  font-size: 34px;
+}
+
+#stage.band #progress-track {
+  order: 2;
+  flex: 1 1 auto;
+  margin-top: 0;
+  height: 14px;
+  border-radius: 7px;
+  border-width: 1px;
+}
+#stage.band #progress-fill { border-radius: 7px; }
+
+/* Броят точки не се събира в лентата и без това се вижда от прогреса. */
+#stage.band #progress-label { display: none; }
+
+/* --- Ред 2: стойката ------------------------------------------------------ */
+
+#stage.band #stack {
+  position: static;
+  flex: 0 0 auto;
+  height: auto;
+  gap: 10px;
+  /* Място за надписа с името на позналия, който изскача над думата и
+     иначе се качва върху плочките. */
+  margin-bottom: 14px;
+}
+
+#stage.band .tile {
+  width: 88px; height: 98px;
+  font-size: 58px;
+  border-radius: 18px;
+  box-shadow:
+    0 7px 0 #a5760d,
+    0 12px 26px rgba(0, 0, 0, 0.5),
+    0 0 32px rgba(255, 210, 63, 0.24),
+    inset 0 2px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -4px 9px rgba(150, 100, 0, 0.28);
+}
+
+/* --- Ред 3: слотовете, взимат остатъка ----------------------------------- */
+
+#stage.band #slots {
+  position: static;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  left: auto; right: auto; top: auto;
+  gap: 8px;
+  overflow: hidden;
+}
+
+#stage.band .group { gap: 12px; }
+
+/* Само числото: "4 букви" не се събира, а кутийките и без това показват
+   колко са. */
+#stage.band .group-label {
+  flex: 0 0 30px;
+  font-size: 21px;
+}
+
+#stage.band .group-words { gap: 8px 30px; }
+
+#stage.band .word { gap: 5px; }
+
+#stage.band .box {
+  width: 42px; height: 48px;
+  font-size: 27px;
+  border-radius: 8px;
+}
+
+#stage.band .word-owner {
+  top: -30px;
+  font-size: 19px;
+  padding: 2px 9px;
+  border-width: 1px;
+}
+
+/* --- Ред 4: класацията, на един ред -------------------------------------- */
+
+#stage.band #board {
+  position: static;
+  flex: 0 0 auto;
+  height: auto;
+  /* Отдясно се пази място за бутона на звука. */
+  padding: 8px 62px 8px 16px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  backdrop-filter: none;
+}
+
+#stage.band #board-title {
+  margin-bottom: 0;
+  font-size: 17px;
+  letter-spacing: 2px;
+  flex: 0 0 auto;
+}
+
+#stage.band #board-content {
+  display: flex;
+  gap: 26px;
+  overflow: hidden;
+}
+
+#stage.band .board-row {
+  font-size: 23px;
+  line-height: 1.2;
+  gap: 8px;
+  white-space: nowrap;
+}
+#stage.band .board-row .pos { width: auto; }
+#stage.band .board-row .who { flex: 0 1 auto; max-width: 190px; }
+
+/* Лентата с последните познати отпада - думите се виждат в слотовете, а
+   мястото е по-нужно другаде. */
+#stage.band #ticker { display: none; }
+
+/* --- Поредица ------------------------------------------------------------- */
+
+/* Поредицата става част от челото. Абсолютно позиционирана горе вдясно тя
+   падаше точно върху таймера. */
+#stage.band #streak {
+  position: static;
+  order: 3;
+  flex: 0 0 auto;
+  width: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  /* Прозрачна, докато няма поредица, но пази мястото си - иначе таймерът
+     подскача наляво-надясно при всяко познаване. */
+  opacity: 0;
+  transform: none;
+  visibility: hidden;
+}
+#stage.band #streak.on { opacity: 1; transform: none; visibility: visible; }
+#stage.band #streak-count { font-size: 30px; }
+#stage.band #streak-label { font-size: 13px; letter-spacing: 2px; }
+#stage.band #timer { order: 4; }
+
+/* --- Паузата между нивата ------------------------------------------------- */
+
+/* Двете класации една до друга, не една под друга - в ниска лента няма
+   височина за подреждане в стълб. */
+#stage.band #intermission {
+  padding: 14px 26px;
+  border-radius: 30px;
+}
+#stage.band #im-headline { font-size: 18px; letter-spacing: 4px; }
+#stage.band #im-level { font-size: 40px; margin-bottom: 10px; }
+
+#stage.band .im-panels {
+  display: flex;
+  gap: 18px;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+#stage.band .im-panel {
+  flex: 1 1 0;
+  margin-bottom: 0;
+  padding: 10px 18px 12px;
+  border-radius: 18px;
+  border-width: 2px;
+  overflow: hidden;
+}
+#stage.band .im-panel h2 { font-size: 17px; letter-spacing: 2px; margin-bottom: 6px; }
+#stage.band .im-row { font-size: 21px; line-height: 1.42; gap: 9px; }
+#stage.band .im-row .pos { width: 26px; }
+#stage.band .im-row .pts { min-width: 60px; font-size: 20px; }
+#stage.band .im-row .move { width: 74px; font-size: 15px; }
+#stage.band .im-empty { font-size: 18px; }
+#stage.band #im-countdown { margin-top: 8px; font-size: 19px; }
+#stage.band #im-countdown b { font-size: 26px; }
+
+/* --- Дребни неща ---------------------------------------------------------- */
+
+/* В лентата няма скрита зона - всичко се вижда. Затова бутонът за звука е
+   малък и блед, докато не го посочиш. */
+#stage.band #mute-btn {
+  right: 14px; bottom: 12px;
+  width: 40px; height: 40px;
+  font-size: 18px;
+  border-width: 2px;
+  opacity: 0.3;
+}
+#stage.band #mute-btn:hover { opacity: 1; }
+#stage.band #mute-btn.off { opacity: 0.55; }
+
+/* В лентата всяко място е заето, затова бележката е един ред долу вляво,
+   точно над класацията - вижда се, но не изяжда слотовете. */
+#stage.band #status-note {
+  top: auto;
+  bottom: 78px;
+  left: 26px;
+  right: auto;
+  max-width: 620px;
+  padding: 7px 14px;
+  text-align: left;
+  font-size: 17px;
+  line-height: 1.3;
+  border-radius: 12px;
+  border-width: 2px;
+  background: rgba(12, 9, 26, 0.95);
+}
+
+#stage.band #fatal {
+  inset: 20px;
+  padding: 20px 26px;
+  border-radius: 22px;
+}
+#stage.band #fatal h1 { font-size: 26px; margin-bottom: 10px; }
+#stage.band #fatal p { font-size: 18px; margin-bottom: 8px; }
+#stage.band #fatal .hint { font-size: 16px; margin-top: 12px; }
+
+/* Зоните на TikTok важат само при цял екран. */
+#stage.band #safe-area { display: none !important; }
