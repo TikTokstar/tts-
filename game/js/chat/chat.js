@@ -181,11 +181,11 @@
     var self = this;
     this.attempt++;
 
-    var delay = Math.min(
-      this.config.reconnectMax,
-      this.config.reconnectMin * Math.pow(2, this.attempt - 1)
-    );
-    delay = Math.round(delay * (0.8 + Math.random() * 0.4));
+    // Разсейването се прилага преди ограничението, не след него - иначе
+    // таванът не е таван и на екрана пише "след 17 секунди" при обявени 15.
+    var delay = this.config.reconnectMin * Math.pow(2, this.attempt - 1);
+    delay = delay * (0.8 + Math.random() * 0.4);
+    delay = Math.round(Math.min(this.config.reconnectMax, delay));
 
     this._status("reconnecting", "опит " + this.attempt + " след " + delay + " ms");
     clearTimeout(this.timer);
