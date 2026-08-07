@@ -63,8 +63,16 @@
    */
   Overlay.prototype.fit = function () {
     this.scale = Math.min(window.innerWidth / 1080, window.innerHeight / 1920);
-    this.stage.style.setProperty("--stage-scale", "scale(" + this.scale + ")");
-    this.stage.style.transform = "scale(" + this.scale + ")";
+
+    // Центрираме останалото място. В OBS мащабът е 1 и отместването е 0;
+    // в обикновен прозорец играта стои в средата, а не залепена вляво с
+    // черна ивица отдясно, която изглежда като счупено.
+    var x = Math.round((window.innerWidth - 1080 * this.scale) / 2);
+    var y = Math.round((window.innerHeight - 1920 * this.scale) / 2);
+
+    var transform = "translate(" + x + "px, " + y + "px) scale(" + this.scale + ")";
+    this.stage.style.setProperty("--stage-scale", transform);
+    this.stage.style.transform = transform;
   };
 
   /* Правоъгълникът на елемент в координатите на сцената, не на екрана. */

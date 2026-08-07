@@ -19,7 +19,10 @@
 html, body {
   width: 100%; height: 100%;
   overflow: hidden;
-  background: #000;
+  /* Не черно: когато прозорецът не е 9:16, остатъкът трябва да изглежда
+     като част от оформлението, а не като изгаснал екран. В OBS при
+     1080x1920 остатък няма изобщо. */
+  background: #07060f;
 }
 
 #stage {
@@ -29,21 +32,52 @@ html, body {
   transform-origin: top left;
   font-family: var(--font);
   color: var(--text);
-  background:
-    radial-gradient(900px 700px at 50% 18%, var(--bg-glow) 0%, transparent 62%),
-    radial-gradient(700px 600px at 80% 78%, rgba(255, 77, 109, 0.10) 0%, transparent 60%),
-    var(--bg);
+  background: var(--bg);
   overflow: hidden;
 }
 
-/* Леко зърно, за да не изглежда градиентът като найлон. */
+/*
+ * Фонът е на три слоя: цветни петна, които бавно се движат, тъмнина по
+ * краищата и фино зърно. Поотделно всяко е дреболия; заедно правят
+ * разликата между "тъмен правоъгълник" и "нещо, което е приятно да гледаш
+ * половин час".
+ */
+#stage::before {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  pointer-events: none;
+  background:
+    radial-gradient(closest-side, var(--bg-glow), transparent 72%)
+      18% 16% / 62% 46% no-repeat,
+    radial-gradient(closest-side, rgba(236, 72, 153, 0.30), transparent 72%)
+      86% 24% / 52% 40% no-repeat,
+    radial-gradient(closest-side, rgba(56, 189, 248, 0.20), transparent 72%)
+      70% 72% / 58% 44% no-repeat,
+    radial-gradient(closest-side, rgba(255, 210, 63, 0.13), transparent 72%)
+      12% 66% / 46% 36% no-repeat;
+  filter: blur(26px);
+  animation: aurora 32s ease-in-out infinite alternate;
+}
+
+/*
+ * Тъмнина по краищата и фино зърно. Този слой е НАД съдържанието, затова
+ * тъмнината започва чак след 58% от радиуса - иначе би сивнала челото и
+ * слотовете, а те трябва да се четат от телефон.
+ */
 #stage::after {
   content: "";
   position: absolute; inset: 0;
   pointer-events: none;
-  opacity: 0.035;
-  background-image: repeating-linear-gradient(
-    0deg, #fff 0 1px, transparent 1px 3px);
+  background:
+    radial-gradient(145% 95% at 50% 44%, transparent 62%, rgba(4, 3, 12, 0.45) 100%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px);
+}
+
+@keyframes aurora {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(2.5%, -2%) scale(1.07); }
+  100% { transform: translate(-2%, 2.5%) scale(1.03); }
 }
 
 /* --- Горе: ниво, прогрес, таймер ---------------------------------------- */
@@ -86,6 +120,7 @@ html, body {
   border-radius: 13px;
   background: var(--slot);
   border: 2px solid var(--slot-edge);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
@@ -126,13 +161,27 @@ html, body {
   font-weight: 800;
   color: #241c00;
   background: linear-gradient(180deg, var(--accent-soft) 0%, var(--accent) 58%, #e0ac1c 100%);
-  border-radius: 22px;
+  position: relative;
+  border-radius: 24px;
   box-shadow:
-    0 10px 0 #a97c10,
-    0 16px 34px rgba(0, 0, 0, 0.5),
-    inset 0 3px 0 rgba(255, 255, 255, 0.6);
+    0 10px 0 #a5760d,
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    0 0 46px rgba(255, 210, 63, 0.22),
+    inset 0 3px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -6px 12px rgba(150, 100, 0, 0.28);
   /* Разбъркването мести плочките между тези позиции. */
   transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+/* Стъклен отблясък по горната половина - плочката спира да е плосък цвят. */
+.tile::after {
+  content: "";
+  position: absolute;
+  left: 8%; right: 8%; top: 6%;
+  height: 38%;
+  border-radius: 16px 16px 40% 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent);
+  pointer-events: none;
 }
 
 .tile.dimmed {
@@ -193,9 +242,15 @@ html, body {
   font-size: 34px;
   font-weight: 800;
   color: transparent;
-  background: var(--slot);
-  border: 2px solid var(--slot-edge);
-  border-radius: 10px;
+  /* Празната кутийка трябва да се вижда от телефон - зрителят брои по нея
+     колко букви търси. Затова светъл кант върху тъмна вътрешност, а не
+     тъмно върху тъмно. */
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.05)), var(--slot);
+  border: 2px solid rgba(255, 255, 255, 0.17);
+  border-radius: 11px;
+  box-shadow:
+    inset 0 2px 7px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* Буква, дадена като намек - видима, но не празнува. */
@@ -206,10 +261,12 @@ html, body {
 }
 
 .box.filled {
-  color: #05230f;
-  background: linear-gradient(180deg, #8df0ae 0%, var(--success) 100%);
+  color: #04220e;
+  background: linear-gradient(180deg, #a6f7c2 0%, var(--success) 62%, #2fae63 100%);
   border-color: #2f9c58;
-  box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+  box-shadow:
+    0 0 26px rgba(74, 222, 128, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.55);
 }
 
 .box.pop {
@@ -294,6 +351,8 @@ html, body {
   background: var(--panel);
   border: 2px solid var(--slot-edge);
   border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
   font-size: 25px;
   white-space: nowrap;
   animation: ticker-in 0.4s cubic-bezier(0.3, 1.4, 0.5, 1);
@@ -308,9 +367,15 @@ html, body {
   top: 1280px; left: 60px; right: 60px;
   height: 160px;
   padding: 16px 26px;
-  background: var(--panel);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 55%),
+    var(--panel);
   border: 2px solid var(--slot-edge);
-  border-radius: 24px;
+  border-radius: 26px;
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
 }
 
 #board-title {
