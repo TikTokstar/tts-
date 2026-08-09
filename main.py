@@ -363,7 +363,9 @@ class TTSBot:
                 return preset
 
         if self.config.get("voice.sticky_per_viewer", True):
-            return self.roster.pick_for_user(username)
+            return self.roster.pick_for_user(
+                username, include_fun=bool(self.config.get("voice.fun_in_pool", False))
+            )
 
         preset = self.roster.resolve(str(self.config.get("voice.default_preset") or ""))
         return preset or self.roster.default()

@@ -38,6 +38,9 @@ DEFAULTS: Dict[str, Any] = {
         "command": "!glas",
         "host_override": None,
         "rate_offset": 0,
+        # Щурите гласове (аниме, демон, катерица...) да участват ли в
+        # случайното раздаване на зрители. Изключено: стигат се с !glas.
+        "fun_in_pool": False,
     },
     "audio": {
         "device": "",

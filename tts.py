@@ -64,6 +64,10 @@ class VoicePreset:
     pitch: str = "+0Hz"
     volume: str = "+0%"
     description: str = ""
+    #: Щур глас: стига се с !glas или от панела, но НЕ участва в
+    #: случайното раздаване на зрители — иначе половината чат щеше да
+    #: звучи като катерички, без никой да го е искал.
+    fun: bool = False
     #: Пълва се при сверяване с живия списък на Microsoft.
     available: bool = True
 
@@ -77,6 +81,7 @@ class VoicePreset:
             pitch=str(raw.get("pitch", "+0Hz")),
             volume=str(raw.get("volume", "+0%")),
             description=str(raw.get("description", "")),
+            fun=bool(raw.get("fun", False)),
         )
         preset.normalize()
         return preset
@@ -96,6 +101,7 @@ class VoicePreset:
             "pitch": self.pitch,
             "volume": self.volume,
             "description": self.description,
+            "fun": self.fun,
             "available": self.available,
         }
 
@@ -121,6 +127,7 @@ class VoicePreset:
             pitch=self.pitch,
             volume=self.volume,
             description=self.description,
+            fun=self.fun,
             available=self.available,
         )
         return clone
@@ -198,6 +205,18 @@ class VoiceRoster:
         out = [p for p in self.presets if p.available]
         return out or self.presets
 
+    def sticky_pool(self, include_fun: bool = False) -> List[VoicePreset]:
+        """Пресетите, между които се раздават зрителите.
+
+        Щурите се пропускат по подразбиране — зрител, който не е поискал
+        нищо, трябва да получи глас, който се слуша спокойно цял стрийм.
+        """
+        usable = self.usable
+        if include_fun:
+            return usable
+        normal = [p for p in usable if not p.fun]
+        return normal or usable
+
     def by_id(self, preset_id: Optional[str]) -> Optional[VoicePreset]:
         if not preset_id:
             return None
@@ -231,14 +250,16 @@ class VoiceRoster:
                 return preset
         return None
 
-    def pick_for_user(self, username: str) -> VoicePreset:
+    def pick_for_user(
+        self, username: str, include_fun: bool = False
+    ) -> VoicePreset:
         """Стабилен хеш -> пресет. Един и същ зрител звучи винаги еднакво."""
-        usable = self.usable
-        if not usable:
+        pool = self.sticky_pool(include_fun)
+        if not pool:
             raise TTSError("Няма нито един използваем гласов пресет.")
         key = username.strip().lstrip("@").lower()
         digest = hashlib.sha256(key.encode("utf-8")).digest()
-        return usable[int.from_bytes(digest[:8], "big") % len(usable)]
+        return pool[int.from_bytes(digest[:8], "big") % len(pool)]
 
     def default(self) -> VoicePreset:
         usable = self.usable

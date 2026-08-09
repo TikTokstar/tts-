@@ -171,7 +171,9 @@
         </select>
         <p class="hint">Зрителите избират сами с <span class="mono">!glas 3</span> в чата.</p>
       </div>
-      <button id="btnForget" class="danger">Изчисти запомнените гласове</button>
+      <label class="toggle"><input type="checkbox" id="fun_in_pool">
+        <span>Раздавай и щурите гласове 🎭<small>иначе се стигат само с !glas</small></span></label>
+      <button id="btnForget" class="danger" style="margin-top:12px">Изчисти запомнените гласове</button>
     </section>
 
     <!-- МОДЕРАЦИЯ -->
@@ -407,6 +409,7 @@ const FIELDS = {
   sticky_per_viewer: "voice.sticky_per_viewer",
   allow_chat_command: "voice.allow_chat_command",
   auto_connect: "tiktok.auto_connect",
+  fun_in_pool: "voice.fun_in_pool",
 };
 
 function dig(obj, dotted) {
@@ -472,7 +475,8 @@ async function bootstrap() {
   }
 
   const options = (data.voices || []).map((v) =>
-    `<option value="${esc(v.id)}">${v.number}. ${esc(v.name)} — ${esc(v.description)}</option>`
+    `<option value="${esc(v.id)}">${v.number}. ${v.fun ? "🎭 " : ""}` +
+    `${esc(v.name)} — ${esc(v.description)}</option>`
   ).join("");
   $("voice").innerHTML = options;
   $("override").innerHTML =

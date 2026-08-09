@@ -191,7 +191,45 @@ def test_sticky_voice_per_user():
 def test_sticky_voices_spread_across_presets():
     roster = tts.VoiceRoster.load()
     names = {roster.pick_for_user(f"user{i}").id for i in range(200)}
-    assert len(names) >= min(8, len(roster)), "разпределението е прекалено струпано"
+    pool = roster.sticky_pool()
+    assert len(names) >= min(8, len(pool)), "разпределението е прекалено струпано"
+
+
+def test_fun_voices_are_not_handed_out_by_default():
+    """Зрител, който не е поискал нищо, не бива да стане катерица."""
+    roster = tts.VoiceRoster.load()
+    fun_ids = {p.id for p in roster.presets if p.fun}
+    assert fun_ids, "би трябвало да има поне един щур глас"
+    handed_out = {roster.pick_for_user(f"user{i}").id for i in range(500)}
+    assert not (handed_out & fun_ids), "щур глас се е промъкнал в раздаването"
+
+
+def test_fun_voices_can_be_opted_into():
+    roster = tts.VoiceRoster.load()
+    fun_ids = {p.id for p in roster.presets if p.fun}
+    handed_out = {
+        roster.pick_for_user(f"user{i}", include_fun=True).id for i in range(500)
+    }
+    assert handed_out & fun_ids, "с включена настройка трябва да се раздават"
+
+
+def test_fun_voices_are_still_pickable_by_command():
+    """!glas трябва да стига до ВСИЧКИ гласове, включително щурите."""
+    roster = tts.VoiceRoster.load()
+    assert roster.resolve("anime").id == "anime"
+    assert roster.resolve("Аниме").id == "anime"
+    numbers = {roster.by_number(i).id for i in range(1, len(roster.usable) + 1)}
+    assert "anime" in numbers and "demon" in numbers
+
+
+def test_sticky_pool_falls_back_if_everything_is_fun():
+    """Ако някой направи всички пресети щури, не оставаме без гласове."""
+    roster = tts.VoiceRoster([
+        tts.VoicePreset("a", "А", "bg-BG-KalinaNeural", fun=True),
+        tts.VoicePreset("b", "Б", "bg-BG-BorislavNeural", fun=True),
+    ])
+    assert len(roster.sticky_pool()) == 2
+    assert roster.pick_for_user("ivan").id in {"a", "b"}
 
 
 def test_resolve_by_number_id_and_name():

@@ -1,5 +1,5 @@
 {
-  "_comment": "Гласови пресети. Български има само 2 неврални гласа, затова разнообразието идва от rate/pitch/volume. Добавяй свои спокойно — 'voice' трябва да е реално име от `edge-tts --list-voices`. Форматите са точно тези на edge-tts: rate/volume в проценти със знак, pitch в Hz със знак.",
+  "_comment": "Гласови пресети. Български има само 2 неврални гласа, затова разнообразието идва от rate/pitch/volume. 'voice' трябва да е реално име от `edge-tts --list-voices`. Форматите са точно тези на edge-tts: rate/volume в проценти със знак, pitch в Hz със знак. \"fun\": true значи, че гласът НЕ участва в случайното раздаване на зрители — стига се само с !glas или от панела. Включи voice.fun_in_pool в config.json, ако искаш и щурите да се раздават на случаен принцип.",
   "presets": [
     {
       "id": "borislav",
@@ -108,6 +108,126 @@
       "pitch": "-30Hz",
       "volume": "+0%",
       "description": "Равен и нисък"
+    },
+    {
+      "id": "anime",
+      "name": "Аниме",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+22%",
+      "pitch": "+75Hz",
+      "volume": "+0%",
+      "description": "Сладък аниме глас",
+      "fun": true
+    },
+    {
+      "id": "kawaii",
+      "name": "Кавай",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+8%",
+      "pitch": "+90Hz",
+      "volume": "+0%",
+      "description": "Много висок и мек",
+      "fun": true
+    },
+    {
+      "id": "chibi",
+      "name": "Чиби",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+45%",
+      "pitch": "+85Hz",
+      "volume": "+0%",
+      "description": "Мъничък и бърз",
+      "fun": true
+    },
+    {
+      "id": "tsundere",
+      "name": "Цундере",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+35%",
+      "pitch": "+45Hz",
+      "volume": "+5%",
+      "description": "Рязък и припрян",
+      "fun": true
+    },
+    {
+      "id": "senpai",
+      "name": "Семпай",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "+6%",
+      "pitch": "+30Hz",
+      "volume": "+0%",
+      "description": "Мек мъжки, по-висок",
+      "fun": true
+    },
+    {
+      "id": "katerica",
+      "name": "Катерица",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+60%",
+      "pitch": "+95Hz",
+      "volume": "+0%",
+      "description": "Като катеричка",
+      "fun": true
+    },
+    {
+      "id": "demon",
+      "name": "Демон",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "-22%",
+      "pitch": "-75Hz",
+      "volume": "+10%",
+      "description": "Много дълбок и бавен",
+      "fun": true
+    },
+    {
+      "id": "zlodei",
+      "name": "Злодеят",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "-5%",
+      "pitch": "-42Hz",
+      "volume": "+5%",
+      "description": "Спокоен и заплашителен",
+      "fun": true
+    },
+    {
+      "id": "trol",
+      "name": "Тролът",
+      "voice": "bg-BG-BorislavNeural",
+      "rate": "-35%",
+      "pitch": "-62Hz",
+      "volume": "+0%",
+      "description": "Много бавен пещерен",
+      "fun": true
+    },
+    {
+      "id": "izvunzem",
+      "name": "Извънземно",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "-32%",
+      "pitch": "+58Hz",
+      "volume": "+0%",
+      "description": "Бавно, но високо — странно",
+      "fun": true
+    },
+    {
+      "id": "hiper",
+      "name": "Хиперактивен",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "+70%",
+      "pitch": "+28Hz",
+      "volume": "+0%",
+      "description": "Изстрелва думите",
+      "fun": true
+    },
+    {
+      "id": "prizrak",
+      "name": "Призрак",
+      "voice": "bg-BG-KalinaNeural",
+      "rate": "-20%",
+      "pitch": "+22Hz",
+      "volume": "-45%",
+      "description": "Тих, бавен, зловещ",
+      "fun": true
     }
   ]
 }
