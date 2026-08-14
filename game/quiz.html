@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<title>Стани богат</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/overlay.css">
+<link rel="stylesheet" href="css/quiz.css">
+</head>
+<body>
+
+<div id="stage">
+
+  <div id="q-header">
+    <div id="q-step">ВЪПРОС 1/15</div>
+    <div id="q-prize">100 лв.</div>
+    <div id="q-votes">0 гласа</div>
+    <div id="q-timer">20</div>
+  </div>
+
+  <div id="q-bar"><div id="q-bar-fill"></div></div>
+
+  <div id="q-text">Зарежда...</div>
+
+  <div id="q-answers"></div>
+
+  <div id="q-foot">
+    <div id="q-hint">ПИШИ 1 2 3 ИЛИ 4</div>
+    <div id="q-board"></div>
+    <div id="q-fifty"></div>
+  </div>
+
+  <!-- Краят на играта -->
+  <section id="q-end">
+    <div id="q-end-title">КРАЙ</div>
+    <div id="q-end-prize">0 лв.</div>
+    <div id="q-end-board"></div>
+    <div id="q-end-next">нова игра след <b id="q-end-seconds">10</b></div>
+  </section>
+
+  <div id="fatal"></div>
+  <div id="status-note"></div>
+  <button id="mute-btn" type="button" title="Звук — клавиш M">🔊</button>
+
+</div>
+
+<script src="config.js"></script>
+<script src="data/questions.js"></script>
+<script src="js/core/escape.js"></script>
+
+<script src="js/chat/chat.js"></script>
+<script src="js/chat/adapter-tikfinity.js"></script>
+<script src="js/chat/adapter-tiktoklive.js"></script>
+<script src="js/chat/adapter-mock.js"></script>
+
+<script src="js/game/leaderboard.js"></script>
+<script src="js/game/quiz.js"></script>
+<script src="js/ui/audio.js"></script>
+<script src="js/ui/quiz-overlay.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var cfg = window.DUMICHKI_CONFIG;
+  var params = new URLSearchParams(location.search);
+
+  ["source", "host"].forEach(function (key) {
+    if (params.get(key)) { cfg.chat[key] = params.get(key); }
+  });
+  if (params.get("port")) { cfg.chat.port = Number(params.get("port")); }
+  if (params.get("debug")) { cfg.chat.debug = true; }
+  if (params.get("mute")) { cfg.audio.enabled = false; }
+  if (params.get("w")) { cfg.layout.width = Number(params.get("w")); }
+  if (params.get("h")) { cfg.layout.height = Number(params.get("h")); }
+
+  if (!cfg.quiz) {
+    document.getElementById("fatal").innerHTML =
+      "<h1>Липсва раздел quiz в config.js</h1>" +
+      "<p>Обнови папката — този раздел дойде с викторината.</p>";
+    document.getElementById("fatal").classList.add("on");
+    return;
+  }
+
+  var quiz = new Dumichki.Quiz(window.DUMICHKI_QUESTIONS, cfg);
+
+  var sounds = new Dumichki.Sounds(cfg).load([
+    "word", "hint", "shuffle", "level-up", "round-end", "round-clear", "countdown"
+  ]);
+
+  new Dumichki.QuizOverlay(quiz, cfg, sounds).bind();
+
+  var chat = Dumichki.Chat.create({
+    source: cfg.chat.source,
+    host: cfg.chat.host,
+    port: cfg.chat.port,
+    debug: cfg.chat.debug,
+    // Мнимите зрители гласуват произволно измежду четирите.
+    mockWords: function () { return ["1", "2", "3", "4"]; }
+  });
+
+  chat.on("message", function (event) { quiz.handleChat(event); });
+
+  var note = document.getElementById("status-note");
+  var isMock = cfg.chat.source === "mock";
+  if (isMock) {
+    note.innerHTML = "ПРОБА — зрителите са измислени";
+    note.classList.add("on");
+  }
+
+  chat.on("status", function (event) {
+    if (isMock) { return; }
+    if (event.state === "connected") {
+      note.classList.remove("on");
+    } else if (event.state !== "connecting") {
+      note.innerHTML = "Няма връзка с <b>" +
+        (chat.adapter.label || cfg.chat.source) + "</b>";
+      note.classList.add("on");
+    }
+  });
+
+  // Звукът - същото както в Думички.
+  var muteBtn = document.getElementById("mute-btn");
+  var STORE_KEY = "dumichki.audio";
+
+  function applyAudio(on, remember) {
+    sounds.setEnabled(on);
+    muteBtn.textContent = on ? "🔊" : "🔇";
+    muteBtn.classList.toggle("off", !on);
+    if (remember) {
+      try { localStorage.setItem(STORE_KEY, on ? "1" : "0"); } catch (err) { /* тихо */ }
+    }
+  }
+
+  var stored = null;
+  if (!params.get("mute")) {
+    try { stored = localStorage.getItem(STORE_KEY); } catch (err) { /* тихо */ }
+  }
+  applyAudio(stored === null ? cfg.audio.enabled : stored === "1", false);
+
+  muteBtn.addEventListener("click", function () { applyAudio(!sounds.enabled, true); });
+  document.addEventListener("keydown", function (event) {
+    if ("mMмМ".indexOf(event.key) !== -1) { applyAudio(!sounds.enabled, true); }
+  });
+
+  quiz.start();
+  chat.connect();
+
+  window.quiz = quiz;
+  window.chat = chat;
+  window.dumichkiSounds = sounds;
+})();
+</script>
+</body>
+</html>

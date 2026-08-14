@@ -22,6 +22,7 @@ SUITES = [
     ("чат", [sys.executable, "tools/test_chat.py"], "playwright"),
     ("overlay", [sys.executable, "tools/test_overlay.py"], "playwright"),
     ("конфигурация", [sys.executable, "tools/test_config.py"], "playwright"),
+    ("викторина", [sys.executable, "tools/test_quiz.py"], "playwright"),
 ]
 
 
