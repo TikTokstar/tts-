@@ -14,12 +14,21 @@
 # 5.1 чете .ps1 без BOM като ANSI, кирилицата се разпада на боклук и
 # скриптът дори не се разбира - кавичките в развалените низове го чупят
 # още при разчитането. Затова и .gitattributes го маркира като двоичен.
+#
+# ЧАСТНО ХРАНИЛИЩЕ: докато проектът е частен, свалянето иска пропуск.
+# Браузърът го има от влизането в GitHub, но Invoke-WebRequest - не, и
+# връща 404, все едно клонът не съществува. Или сложи token до скрипта
+# (виж по-долу), или направи хранилището публично, или сваляй на ръка.
 
 $ErrorActionPreference = 'Stop'
 
-# codeload, а не github.com/archive: вторият минава през CDN, който сервира
-# стар архив с часове. Точно това накара веднъж да се изтегли старата игра.
-$url  = 'https://codeload.github.com/TikTokstar/tts-/zip/refs/heads/claude/bulgarian-dumichki-tiktok-lq2kbf'
+$owner  = 'TikTokstar'
+$repo   = 'tts-'
+$branch = 'claude/bulgarian-dumichki-tiktok-lq2kbf'
+
+$url    = "https://codeload.github.com/$owner/$repo/zip/refs/heads/$branch"
+$byHand = "https://github.com/$owner/$repo/archive/refs/heads/$branch.zip"
+
 $here = Split-Path -Parent $PSScriptRoot     # папката на играта, не tools\
 $self = '0-ОБНОВИ.bat'                       # него го върти cmd.exe точно сега
 
@@ -34,7 +43,24 @@ try {
 
     # TLS 1.2 - на по-стари Windows по подразбиране е изключен и GitHub отказва.
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+
+    # Пропуск, ако си сложил такъв. Файлът не влиза в хранилището.
+    $headers = @{}
+    $tokenFile = Join-Path $here 'github-token.txt'
+    if (Test-Path $tokenFile) {
+        $token = (Get-Content $tokenFile -Raw).Trim()
+        if ($token) { $headers['Authorization'] = "token $token" }
+    }
+
+    Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing -Headers $headers
+
+    # Всеки zip започва с PK. Ако GitHub е върнал страница за вход или
+    # "404: Not Found", файлът е текст - Expand-Archive би се оплакал от
+    # "повреден архив" и би пратил да се търси несъществуващ проблем.
+    $head = [System.IO.File]::ReadAllBytes($zip) | Select-Object -First 2
+    if ($head.Count -lt 2 -or $head[0] -ne 0x50 -or $head[1] -ne 0x4B) {
+        throw 'GitHub не върна архив. Най-вероятно хранилището е частно и свалянето иска пропуск.'
+    }
 
     Say 'Разархивирам ...'
     Expand-Archive -Path $zip -DestinationPath $tmp -Force
@@ -83,8 +109,11 @@ catch {
     Say 'Обновяването не мина.'
     Say $_.Exception.Message
     Write-Host ''
-    Say 'Свали архива на ръка от:'
-    Say $url
+    Say 'Свали на ръка: отвори този адрес в браузъра, в който си влязъл в GitHub:'
+    Write-Host ''
+    Say $byHand
+    Write-Host ''
+    Say 'Адресът работи от браузър, защото там пропускът ти вече е наличен.'
     Write-Host ''
     exit 1
 }
