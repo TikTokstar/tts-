@@ -304,6 +304,44 @@
       group.appendChild(holder);
       slots.appendChild(group);
     });
+
+    this.fitSlots();
+  };
+
+  /* Свива кутийките, докато всички редове се поберат в лентата.
+   *
+   * Слотовете са центрирани, тоест при препълване се реже и отгоре, и
+   * отдолу - scrollHeight не хваща горното, затова се събират височините
+   * на самите групи. Те са в layout-пиксели и не зависят от мащаба на
+   * сцената.
+   *
+   * Итеративно е нарочно: по-тесни кутийки значи по-малко пренасяне на
+   * нов ред, тоест нужната височина пада повече от очакваното. Три
+   * минавания стигат, за да се уталожи.
+   */
+  Overlay.prototype.fitSlots = function () {
+    var slots = el("slots");
+    slots.style.setProperty("--slot-fit", "1");
+    if (this.mode !== "band") { return; }
+
+    var groups = slots.children;
+    if (!groups.length) { return; }
+
+    var gap = parseFloat(getComputedStyle(slots).rowGap) || 0;
+    var fit = 1;
+
+    for (var pass = 0; pass < 4; pass++) {
+      var needed = gap * (groups.length - 1);
+      for (var i = 0; i < groups.length; i++) { needed += groups[i].offsetHeight; }
+
+      // Малко въздух отгоре за надписа с името на позналия.
+      var available = slots.clientHeight - 8;
+      if (available <= 0 || needed <= available) { return; }
+
+      fit = Math.max(0.6, fit * (available / needed));
+      slots.style.setProperty("--slot-fit", fit.toFixed(3));
+      gap = parseFloat(getComputedStyle(slots).rowGap) || 0;
+    }
   };
 
   Overlay.prototype.onHint = function (e) {

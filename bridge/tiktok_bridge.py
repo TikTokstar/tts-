@@ -149,15 +149,32 @@ async def run(username, host, port, verbose):
             delay = min(delay * 2, 60)
 
 
+def clean_username(parts):
+    """Сглобява името от каквото е дошло по командния ред.
+
+    Ако в името се промъкне интервал (много лесно става при копиране),
+    обвивката го разцепва на два аргумента. Името в TikTok не може да
+    съдържа интервали, затова просто ги махаме, вместо да се отказваме с
+    неразбираемо съобщение.
+    """
+    name = "".join("".join(parts).split())
+    return name.lstrip("@")
+
+
 def main():
     parser = argparse.ArgumentParser(description="TikTokLive мост към играта Думички.")
-    parser.add_argument("username", help="потребителското име в TikTok, напр. @someone")
+    parser.add_argument("username", nargs="+",
+                        help="потребителското име в TikTok, напр. @someone")
     parser.add_argument("--host", default="127.0.0.1", help="по подразбиране 127.0.0.1")
     parser.add_argument("--port", type=int, default=21214, help="по подразбиране 21214")
     parser.add_argument("--verbose", action="store_true", help="печата всеки коментар")
     args = parser.parse_args()
 
-    username = args.username if args.username.startswith("@") else "@" + args.username
+    name = clean_username(args.username)
+    if not name:
+        sys.exit("Празно потребителско име. Пусни: python bridge/tiktok_bridge.py @името_ти")
+
+    username = "@" + name
 
     try:
         asyncio.run(run(username, args.host, args.port, args.verbose))

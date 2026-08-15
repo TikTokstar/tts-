@@ -47,6 +47,12 @@ html, body {
   position: absolute;
   inset: -25%;
   pointer-events: none;
+  /* ЗАД съдържанието. Без това позиционираният псевдоелемент се рисува
+     НАД всяко дете, което не е позиционирано - а въпросът във викторината
+     е точно такъв. Розовото петно минаваше през буквите му и средата на
+     изречението избледняваше. Плочките оцеляваха само защото имат
+     position: relative. */
+  z-index: -1;
   background:
     radial-gradient(closest-side, var(--bg-glow), transparent 72%)
       18% 16% / 62% 46% no-repeat,

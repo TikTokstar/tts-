@@ -95,7 +95,9 @@
     el("q-prize").textContent = formatPrize(e.prize) + " лв.";
     el("q-text").textContent = e.text;
     el("q-fifty").classList.remove("on");
-    el("q-hint").textContent = "ПИШИ 1 2 3 ИЛИ 4";
+    var hint = el("q-hint");
+    hint.className = "";
+    hint.textContent = "ПИШИ 1 2 3 ИЛИ 4";
 
     var holder = el("q-answers");
     holder.innerHTML = "";
@@ -168,7 +170,9 @@
       this.answers[e.chosen].node.classList.add("wrong");
       this.shake();
     }
-    el("q-hint").textContent = e.right
+    var hint = el("q-hint");
+    hint.className = e.right ? "ok" : "bad";
+    hint.textContent = e.right
       ? "ВЯРНО — " + e.scorers + (e.scorers === 1 ? " познал" : " познали")
       : (e.chosen < 0 ? "НИКОЙ НЕ ГЛАСУВА" : "ГРЕШКА");
     this.sounds.play(e.right ? "round-clear" : "round-end");

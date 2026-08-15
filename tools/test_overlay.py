@@ -146,6 +146,60 @@ async def main():
         """)
         check("нищо не излиза извън лентата", not overflow, overflow)
 
+        # Рунд с пет различни дължини иска пет реда, а те не се събират в
+        # 480px. Дълго време най-горният и най-долният се режеха наполовина,
+        # без нищо да "излиза извън лентата" - #slots ги отрязваше вътре в
+        # себе си. Затова се мери всяка група поотделно, а не само рамката.
+        clipped = await page.evaluate("""
+          (function () {
+            var slots = document.getElementById('slots');
+            var box = slots.getBoundingClientRect();
+            var out = [];
+            for (var i = 0; i < slots.children.length; i++) {
+              var g = slots.children[i].getBoundingClientRect();
+              if (g.top < box.top - 1 || g.bottom > box.bottom + 1) { out.push(i); }
+            }
+            return out;
+          })()
+        """)
+        check("нито един ред с думи не е отрязан", not clipped,
+              "отрязани редове: %s" % clipped)
+
+        # Най-тежкият случай не идва при всеки рунд - изкарваме го нарочно.
+        worst = await page.evaluate("""
+          (function () {
+            var slots = document.getElementById('slots');
+            var seen = 0, bad = [];
+            for (var round = 0; round < 25 && seen < 3; round++) {
+              window.game.startRound();
+              var groups = slots.children;
+              if (groups.length < 5) { continue; }
+              seen++;
+              var box = slots.getBoundingClientRect();
+              for (var i = 0; i < groups.length; i++) {
+                var g = groups[i].getBoundingClientRect();
+                if (g.top < box.top - 1 || g.bottom > box.bottom + 1) {
+                  bad.push(round + ":" + i);
+                }
+              }
+            }
+            return { seen: seen, bad: bad,
+                     fit: getComputedStyle(slots).getPropertyValue("--slot-fit").trim() };
+          })()
+        """)
+        check("и при пет реда нищо не се реже", not worst["bad"],
+              "%d рунда с 5 реда, свиване %s, отрязани %s"
+              % (worst["seen"], worst["fit"], worst["bad"]))
+
+        # Горното изкара двайсетина рунда - думите отдолу трябва да са от
+        # този, който стои на екрана сега, а не от отдавна отминал.
+        await page.evaluate("""
+          window.game.levelPoints = 0;
+          window.game.startRound();
+        """)
+        await page.wait_for_timeout(300)
+        targets = await page.evaluate("window.game.round.targets")
+
         # Поредицата стои на реда на челото, не върху таймера.
         collide = await page.evaluate("""
           (function () {

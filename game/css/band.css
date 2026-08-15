@@ -101,32 +101,38 @@
 
 /* --- Ред 3: слотовете, взимат остатъка ----------------------------------- */
 
+/* Всичко тук се мери спрямо --slot-fit. Рунд с пет различни дължини иска
+   пет реда, а в лента от 480px те не се събират - и досега най-горният и
+   най-долният ред се режеха наполовина. overlay.js мери и свива числото,
+   докато редовете се поберат. При три-четири реда си остава 1. */
 #stage.band #slots {
   position: static;
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
   left: auto; right: auto; top: auto;
-  gap: 8px;
+  --slot-fit: 1;
+  gap: calc(8px * var(--slot-fit));
   overflow: hidden;
 }
 
-#stage.band .group { gap: 12px; }
+#stage.band .group { gap: calc(12px * var(--slot-fit)); }
 
 /* Само числото: "4 букви" не се събира, а кутийките и без това показват
    колко са. */
 #stage.band .group-label {
-  flex: 0 0 30px;
-  font-size: 21px;
+  flex: 0 0 calc(30px * var(--slot-fit));
+  font-size: calc(21px * var(--slot-fit));
 }
 
-#stage.band .group-words { gap: 8px 30px; }
+#stage.band .group-words { gap: calc(8px * var(--slot-fit)) calc(30px * var(--slot-fit)); }
 
-#stage.band .word { gap: 5px; }
+#stage.band .word { gap: calc(5px * var(--slot-fit)); }
 
 #stage.band .box {
-  width: 42px; height: 48px;
-  font-size: 27px;
+  width: calc(42px * var(--slot-fit));
+  height: calc(48px * var(--slot-fit));
+  font-size: calc(27px * var(--slot-fit));
   border-radius: 8px;
 }
 

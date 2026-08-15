@@ -76,15 +76,18 @@
 
 #q-text {
   flex: 0 0 auto;
-  font-size: 30px;
+  font-size: 38px;
   font-weight: 700;
-  line-height: 1.25;
-  padding: 10px 16px;
+  line-height: 1.2;
+  padding: 8px 18px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  /* Плътна подложка, а не прозрачна. Отзад минава лилаво-червено сияние и
+     през 5% бяло то избелваше буквите точно по средата на въпроса. */
+  background: #14102c;
   border: 2px solid var(--slot-edge);
-  /* Дългите въпроси не бива да изтласкат отговорите извън лентата. */
-  max-height: 84px;
+  /* Дългите въпроси не бива да изтласкат отговорите извън лентата.
+     Два реда по 38px са таванът; повече не се чете от телефон. */
+  max-height: 104px;
   overflow: hidden;
 }
 
@@ -103,34 +106,39 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 14px;
+  gap: 14px;
+  padding: 6px 16px;
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.25)), var(--slot);
+  /* Също плътна: върху прозрачна сияението отзад изяждаше контраста и
+     двата десни отговора се четяха по-зле от левите. */
+  background: #191539;
   border: 2px solid rgba(255, 255, 255, 0.16);
   box-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   transition: opacity 0.3s ease, transform 0.2s ease;
 }
 
-/* Гласовете пълнят отговора отзад - вижда се накъде духа вятърът, без да
-   се чете число. */
+/* Гласовете като лентичка НАЙ-ДОЛУ в отговора, не като заливка отзад.
+   Заливката минаваше през текста и точно водещият отговор - този, който
+   всички гледат - се четеше най-зле. */
 .answer-bar {
   position: absolute;
-  left: 0; top: 0; bottom: 0;
+  left: 0; right: auto; bottom: 0;
+  height: 7px;
   width: 0;
-  background: linear-gradient(90deg, rgba(122, 162, 255, 0.42), rgba(122, 162, 255, 0.12));
+  background: linear-gradient(90deg, #5b7fd4, #7aa2ff);
+  border-radius: 0 4px 0 0;
   transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .answer-num {
   position: relative;
   flex: 0 0 auto;
-  width: 40px; height: 40px;
+  width: 46px; height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   color: #241c00;
   background: linear-gradient(180deg, var(--accent-soft), var(--accent));
@@ -140,18 +148,19 @@
 .answer-text {
   position: relative;
   flex: 1 1 auto;
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.15;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
   overflow: hidden;
 }
 
 .answer-count {
   position: relative;
   flex: 0 0 auto;
-  font-size: 21px;
+  font-size: 24px;
   font-weight: 800;
-  color: var(--dim);
+  color: var(--text);
+  opacity: 0.55;
   font-variant-numeric: tabular-nums;
 }
 
@@ -203,16 +212,23 @@
   border: 2px solid var(--slot-edge);
 }
 
+/* Вдясно, а не вляво: вляво стои бележката "няма връзка" и я закриваше.
+   А това е единственото упътване, което новодошлият зрител вижда - трябва
+   да се чете, не да се търси. */
 #q-hint {
+  order: 3;
   flex: 0 0 auto;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--dim);
+  font-size: 23px;
+  font-weight: 800;
+  color: var(--accent);
   letter-spacing: 1px;
   white-space: nowrap;
 }
+#q-hint.ok { color: var(--success); }
+#q-hint.bad { color: var(--hot); }
 
 #q-board {
+  order: 1;
   flex: 1 1 auto;
   display: flex;
   gap: 22px;
@@ -230,6 +246,7 @@
 
 /* Напредъкът към 50:50, докато чатът го вика. */
 #q-fifty {
+  order: 2;
   flex: 0 0 auto;
   font-size: 18px;
   font-weight: 800;

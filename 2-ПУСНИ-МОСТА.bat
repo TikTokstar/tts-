@@ -12,8 +12,8 @@ if not defined PY goto nopython
 
 set "TIKTOK="
 if exist "tiktok-user.txt" set /p TIKTOK=<tiktok-user.txt
-if not defined TIKTOK goto ask
-goto check
+call :clean
+if defined TIKTOK goto remember
 
 :ask
 echo.
@@ -21,14 +21,18 @@ echo   Как е TikTok името ти? Без маймунка.
 echo   Например: oneisthelonliestnumber69
 echo.
 set /p TIKTOK="   Име: "
+call :clean
 if not defined TIKTOK goto ask
->tiktok-user.txt echo %TIKTOK%
 echo.
 echo   Запомних го. Следващия път няма да питам.
 echo   (за смяна: изтрий файла tiktok-user.txt)
 echo.
 
-:check
+:remember
+rem Записваме изчистеното име. Един залепен интервал при копиране
+rem иначе трови всяко следващо пускане, не само това.
+>tiktok-user.txt echo %TIKTOK%
+
 echo   Проверявам дали библиотеката е налична ...
 %PY% -c "import TikTokLive" >nul 2>nul
 if errorlevel 1 goto install
@@ -51,7 +55,7 @@ echo   ОСТАВИ ТОЗИ ПРОЗОРЕЦ ОТВОРЕН, докато ст�
 echo   Затвориш ли го, играта спира да получава коментари.
 echo ==========================================================
 echo.
-%PY% bridge\tiktok_bridge.py @%TIKTOK% --verbose
+%PY% bridge\tiktok_bridge.py "@%TIKTOK%" --verbose
 echo.
 pause
 exit /b
@@ -72,3 +76,12 @@ echo   сложи отметка "Add Python to PATH" на първия екра
 echo.
 pause
 exit /b 1
+
+:clean
+rem Маха интервалите и маймунката. Име в TikTok няма как да съдържа
+rem интервал, така че махането им е безопасно и спасява копирането.
+if not defined TIKTOK goto :eof
+set "TIKTOK=%TIKTOK: =%"
+if not defined TIKTOK goto :eof
+if "%TIKTOK:~0,1%"=="@" set "TIKTOK=%TIKTOK:~1%"
+goto :eof
