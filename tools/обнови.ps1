@@ -1,4 +1,4 @@
-# Сваля последната версия и я слага върху текущата папка.
+﻿# Сваля последната версия и я слага върху текущата папка.
 #
 # Пуска се от 0-ОБНОВИ.bat, не се стартира на ръка.
 #
@@ -9,11 +9,19 @@
 # Защо PowerShell, а не всичко в .bat: PowerShell прочита целия скрипт в
 # паметта преди да го изпълни. Ако обновяването презапише самия скрипт по
 # средата, нищо не се обърква.
+#
+# ВНИМАНИЕ: този файл ЗАДЪЛЖИТЕЛНО се пази с UTF-8 BOM. Windows PowerShell
+# 5.1 чете .ps1 без BOM като ANSI, кирилицата се разпада на боклук и
+# скриптът дори не се разбира - кавичките в развалените низове го чупят
+# още при разчитането. Затова и .gitattributes го маркира като двоичен.
 
 $ErrorActionPreference = 'Stop'
 
-$url  = 'https://github.com/TikTokstar/tts-/archive/refs/heads/claude/bulgarian-dumichki-tiktok-lq2kbf.zip'
+# codeload, а не github.com/archive: вторият минава през CDN, който сервира
+# стар архив с часове. Точно това накара веднъж да се изтегли старата игра.
+$url  = 'https://codeload.github.com/TikTokstar/tts-/zip/refs/heads/claude/bulgarian-dumichki-tiktok-lq2kbf'
 $here = Split-Path -Parent $PSScriptRoot     # папката на играта, не tools\
+$self = '0-ОБНОВИ.bat'                       # него го върти cmd.exe точно сега
 
 function Say($text) { Write-Host "  $text" }
 
@@ -45,15 +53,24 @@ try {
     # Старите стартери се махат: между версиите се преномерираха и иначе
     # остават стари файлове с подвеждащи имена.
     Get-ChildItem -Path $here -Filter '*.bat' |
-        Where-Object { $_.Name -ne '0-ОБНОВИ.bat' } |
+        Where-Object { $_.Name -ne $self } |
         Remove-Item -Force
 
     Say 'Слагам новото ...'
     Get-ChildItem -Path $src.FullName -Force |
-        Where-Object { $_.Name -ne '0-ОБНОВИ.bat' } |
+        Where-Object { $_.Name -ne $self } |
         ForEach-Object {
             Copy-Item $_.FullName -Destination $here -Recurse -Force
         }
+
+    # Предпазна мрежа: ако сравнението по име някога се провали, горният ред
+    # трие обновяването и следващият не го връща. Тогава оставаш без начин
+    # да се обновиш - затова се проверява изрично.
+    $selfPath = Join-Path $here $self
+    if (-not (Test-Path $selfPath)) {
+        $fromZip = Join-Path $src.FullName $self
+        if (Test-Path $fromZip) { Copy-Item $fromZip $selfPath -Force }
+    }
 
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 

@@ -18,6 +18,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SUITES = [
+    ("файлове", [sys.executable, "tools/test_files.py"], None),
     ("ядро", ["node", "tools/test_core.js"], "node"),
     ("чат", [sys.executable, "tools/test_chat.py"], "playwright"),
     ("overlay", [sys.executable, "tools/test_overlay.py"], "playwright"),
@@ -27,6 +28,8 @@ SUITES = [
 
 
 def have(requirement):
+    if requirement is None:
+        return True
     if requirement == "node":
         return shutil.which("node") is not None
     try:
