@@ -50,15 +50,23 @@ def main():
     except OSError as exc:
         sys.exit("Портът %d е зает (%s). Пробвай с --port 8081." % (args.port, exc))
 
+    base = "http://%s:%d" % (args.host, args.port)
+
     print("Играта се дава от %s" % GAME_DIR)
     print()
-    print("  Сложи този адрес в браузър източника:")
-    print("    http://%s:%d/index.html" % (args.host, args.port))
+    print("  Адреси за browser източника:")
+    print()
+    print("    Думички        %s/index.html" % base)
+    print("    Стани богат    %s/quiz.html" % base)
+    print()
+    print("  За проба, с измислени зрители:")
+    print("    Думички        %s/index.html?source=mock" % base)
+    print("    Стани богат    %s/quiz.html?source=mock" % base)
     print()
     print("  Проверка на връзката с чата:")
-    print("    http://%s:%d/chat-test.html?debug=1" % (args.host, args.port))
+    print("    %s/chat-test.html" % base)
     print()
-    print("Ctrl+C за спиране.")
+    print("Остави този прозорец отворен. Ctrl+C за спиране.")
 
     try:
         server.serve_forever()
