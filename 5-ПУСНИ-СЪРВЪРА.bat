@@ -11,10 +11,8 @@ if not defined PY where py >nul 2>nul && set "PY=py"
 if not defined PY goto nopython
 
 echo.
-echo   Адресът за browser източника:
-echo       http://127.0.0.1:8080/index.html
-echo.
-echo   Остави този прозорец отворен, докато стриймваш.
+echo   Сървър за папката:
+echo   %~dp0
 echo.
 %PY% tools\serve.py
 pause

@@ -37,6 +37,45 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             sys.stdout.write("  %s\n" % (fmt % args))
 
 
+def open_server(host, port, tries=10):
+    """Първият свободен порт от port нататък.
+
+    Стар прозорец на сървъра държи 8080 дълго след затварянето му, а
+    съобщението "портът е зает" не помага на никого по време на стрийм.
+    """
+    socketserver.TCPServer.allow_reuse_address = True
+    last = None
+    for offset in range(tries):
+        try:
+            return socketserver.TCPServer((host, port + offset), Handler)
+        except OSError as exc:
+            last = exc
+    sys.exit("Не намирам свободен порт между %d и %d (%s)."
+             % (port, port + tries - 1, last))
+
+
+def check_folder():
+    """Вика, ако папката е от стара версия.
+
+    Най-честата грешка: няколко разархивирани папки в Изтегляния и сървърът
+    тръгва от грешната. Тогава /quiz.html дава 404 и изглежда като счупен
+    код, а всъщност просто липсва файлът.
+    """
+    missing = [name for name in ("index.html", "quiz.html")
+               if not os.path.exists(os.path.join(GAME_DIR, name))]
+    if not missing:
+        return
+    print()
+    print("!" * 62)
+    print("  ТАЗИ ПАПКА Е ОТ СТАРА ВЕРСИЯ - липсва %s" % ", ".join(missing))
+    print()
+    print("  Пуснал си сървъра от папка, в която този файл още го няма.")
+    print("  Натисни 0-ОБНОВИ.bat, или свали архива наново и пусни")
+    print("  5-ПУСНИ-СЪРВЪРА.bat от НОВАТА папка.")
+    print("!" * 62)
+    print()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Дава играта по HTTP.")
     parser.add_argument("--port", type=int, default=8080)
@@ -44,15 +83,19 @@ def main():
                         help="127.0.0.1 значи само тази машина")
     args = parser.parse_args()
 
-    socketserver.TCPServer.allow_reuse_address = True
-    try:
-        server = socketserver.TCPServer((args.host, args.port), Handler)
-    except OSError as exc:
-        sys.exit("Портът %d е зает (%s). Пробвай с --port 8081." % (args.port, exc))
+    check_folder()
 
-    base = "http://%s:%d" % (args.host, args.port)
+    server = open_server(args.host, args.port)
+    port = server.server_address[1]
+    base = "http://%s:%d" % (args.host, port)
 
-    print("Играта се дава от %s" % GAME_DIR)
+    if port != args.port:
+        print("Портът %d е зает от друг прозорец - тръгвам на %d."
+              % (args.port, port))
+        print()
+
+    print("Играта се дава от:")
+    print("  %s" % GAME_DIR)
     print()
     print("  Адреси за browser източника:")
     print()
