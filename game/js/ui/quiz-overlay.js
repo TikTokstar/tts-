@@ -187,7 +187,8 @@
 
     el("q-end-prize").textContent = formatPrize(e.guaranteed) + " лв.";
     el("q-end-board").innerHTML = e.top.map(function (row) {
-      return '<div class="row"><span class="pos">' + row.rank + '.</span>' +
+      return '<div class="row"><span class="pos" data-rank="' + row.rank +
+        '">' + row.rank + '</span>' +
         "<span>" + escapeHtml(row.user) + '</span><span class="pts">' +
         row.points + "</span></div>";
     }).join("") || '<div class="row">никой не гласува</div>';
@@ -200,7 +201,8 @@
   QuizOverlay.prototype.drawBoard = function () {
     var rows = this.quiz.board.top(this.cfg.board.inGame);
     el("q-board").innerHTML = rows.map(function (row) {
-      return '<div class="row"><span class="pos">' + row.rank + '.</span>' +
+      return '<div class="row"><span class="pos" data-rank="' + row.rank +
+        '">' + row.rank + '</span>' +
         "<span>" + escapeHtml(row.user) + '</span><span class="pts">' +
         row.points + "</span></div>";
     }).join("");

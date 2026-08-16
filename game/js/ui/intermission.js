@@ -71,7 +71,7 @@
 
       return '<div class="im-row' + (index === 0 ? " first" : "") +
         '" style="animation-delay:' + delay.toFixed(2) + 's">' +
-        '<span class="pos">' + row.rank + '.</span>' +
+        '<span class="pos" data-rank="' + row.rank + '">' + row.rank + '</span>' +
         '<span class="who">' + root.Dumichki.escapeHtml(row.user) + '</span>' +
         move +
         '<span class="pts">' + row.points + "</span></div>";

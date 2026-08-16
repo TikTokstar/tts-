@@ -250,12 +250,14 @@ html, body {
   color: transparent;
   /* Празната кутийка трябва да се вижда от телефон - зрителят брои по нея
      колко букви търси. Затова светъл кант върху тъмна вътрешност, а не
-     тъмно върху тъмно. */
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.05)), var(--slot);
-  border: 2px solid rgba(255, 255, 255, 0.17);
+     тъмно върху тъмно. Кантът беше 0.17 и на телефон кутийките се сливаха
+     една с друга в сива ивица. */
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(255, 255, 255, 0.08)), var(--slot);
+  border: 2px solid rgba(255, 255, 255, 0.28);
   border-radius: 11px;
   box-shadow:
-    inset 0 2px 7px rgba(0, 0, 0, 0.5),
+    inset 0 3px 8px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.10),
     0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -279,11 +281,14 @@ html, body {
   animation: box-pop 0.42s cubic-bezier(0.3, 1.6, 0.45, 1);
 }
 
-/* Думите, които никой не позна - показват се в края на рунда. */
+/* Думите, които никой не позна - показват се в края на рунда.
+   Приглушени, но четими: смисълът им е зрителят да види какво е изпуснал,
+   а по-тъмното сиво отпреди се губеше още на телефона. */
 .box.missed {
-  color: #6f6a8e;
-  background: #16132c;
-  border-color: #2a2450;
+  color: #b3accf;
+  background: #1c1838;
+  border-color: #3a3268;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* Името на позналия. Редовете с думи са близо един до друг, затова
@@ -396,14 +401,55 @@ html, body {
 
 .board-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
   font-size: 30px;
   line-height: 1.42;
 }
-.board-row .pos { width: 40px; font-weight: 800; color: var(--accent); }
 .board-row .who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .board-row .pts { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Мястото като значка, а не като "1." с цвят. Три места, три метала -
+   зрителят разбира кой води, без да чете. Работи и в двете игри и в
+   паузата между нивата, затова стои тук, а не в band.css. */
+.board-row .pos,
+#q-board .row .pos,
+#q-end-board .row .pos,
+.im-row .pos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.28em; height: 1.28em;
+  border-radius: 0.34em;
+  font-size: 0.76em;
+  font-weight: 800;
+  color: #241c00;
+  background: linear-gradient(180deg, #cfd6e6, #97a1ba);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.board-row .pos[data-rank="1"],
+#q-board .row .pos[data-rank="1"],
+#q-end-board .row .pos[data-rank="1"],
+.im-row .pos[data-rank="1"] {
+  background: linear-gradient(180deg, var(--accent-soft), var(--accent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 0 14px rgba(255, 210, 63, 0.5);
+}
+.board-row .pos[data-rank="3"],
+#q-board .row .pos[data-rank="3"],
+#q-end-board .row .pos[data-rank="3"],
+.im-row .pos[data-rank="3"] {
+  background: linear-gradient(180deg, #eec08c, #c2854a);
+}
+/* От четвърто място нататък значката само пречи - остава число. */
+.board-row .pos:not([data-rank="1"]):not([data-rank="2"]):not([data-rank="3"]),
+#q-board .row .pos:not([data-rank="1"]):not([data-rank="2"]):not([data-rank="3"]),
+#q-end-board .row .pos:not([data-rank="1"]):not([data-rank="2"]):not([data-rank="3"]),
+.im-row .pos:not([data-rank="1"]):not([data-rank="2"]):not([data-rank="3"]) {
+  background: none;
+  box-shadow: none;
+  color: var(--dim);
+}
 
 /* --- Паузата между нивата ------------------------------------------------ */
 

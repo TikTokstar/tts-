@@ -9,6 +9,24 @@
 (function (root) {
   "use strict";
 
+  /*
+   * Кара playbackRate да качва височината, вместо да ускорява.
+   *
+   * Браузърите по подразбиране пазят височината при смяна на скоростта -
+   * измислено е за подкасти на двойна скорост. За нас това значеше, че
+   * поредицата само свиреше звука по-бързо, все на същия тон: ефектът,
+   * заради който изобщо има поредица, липсваше.
+   *
+   * Изключим ли пазенето, скоростта работи като на лента - по-бързо значи
+   * по-високо. Двата стари префикса са за по-стари браузъри; в OBS може да
+   * върви доста стар Chromium.
+   */
+  function keepTapeSpeed(audio) {
+    audio.preservesPitch = false;
+    audio.mozPreservesPitch = false;
+    audio.webkitPreservesPitch = false;
+  }
+
   function Sounds(config) {
     this.cfg = config.audio;
     this.enabled = this.cfg.enabled;
@@ -46,6 +64,7 @@
         var audio = new Audio(self.cfg.folder + name + ".wav");
         audio.preload = "auto";
         audio.volume = self.cfg.volume;
+        keepTapeSpeed(audio);
         self.pool[name].items.push(audio);
       }
     });
@@ -75,6 +94,9 @@
 
     try {
       audio.currentTime = 0;
+      // Пак тук, а не само при зареждането: някои браузъри връщат пазенето
+      // на височината при смяна на източника или при повторно зареждане.
+      keepTapeSpeed(audio);
       audio.playbackRate = rate || 1;
       audio.volume = this.cfg.volume;
       var promise = audio.play();

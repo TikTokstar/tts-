@@ -498,8 +498,11 @@
   Overlay.prototype.drawBoard = function () {
     var rows = this.game.totalBoard.top(this.cfg.board.inGame);
     var body = rows.map(function (row) {
-      return '<div class="board-row"><span class="pos">' + row.rank +
-        '.</span><span class="who">' + escapeHtml(row.user) +
+      // data-rank носи мястото на CSS-а: първите три получават значка в
+      // златно, сребърно и бронзово. По nth-child не става - класацията
+      // невинаги започва от първо място.
+      return '<div class="board-row"><span class="pos" data-rank="' + row.rank +
+        '">' + row.rank + '</span><span class="who">' + escapeHtml(row.user) +
         '</span><span class="pts">' + row.points + "</span></div>";
     }).join("");
 

@@ -16,11 +16,17 @@
   gap: 10px;
   padding: 16px 26px 14px;
   /* Подложка, за да се чете върху какъвто и да е геймплей отзад.
-     Плътността ѝ идва от config.js. */
-  background: var(--stage-bg);
+     Плътността ѝ идва от config.js. Отгоре ѝ има съвсем лек светъл наклон -
+     плоският правоъгълник изглежда като изрязан от екрана, а наклонът му
+     дава ръб и лентата сяда върху геймплея, вместо да лежи в него. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 42%),
+    var(--stage-bg);
   border-radius: 30px;
-  border: 2px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 /* Сиянието остава, но по-кротко - лентата е ниска и петната биха се
@@ -66,11 +72,11 @@
   order: 2;
   flex: 1 1 auto;
   margin-top: 0;
-  height: 14px;
-  border-radius: 7px;
-  border-width: 1px;
+  height: 18px;
+  border-radius: 9px;
+  border-width: 2px;
 }
-#stage.band #progress-fill { border-radius: 7px; }
+#stage.band #progress-fill { border-radius: 9px; }
 
 /* Броят точки не се събира в лентата и без това се вижда от прогреса. */
 #stage.band #progress-label { display: none; }
@@ -119,10 +125,22 @@
 #stage.band .group { gap: calc(12px * var(--slot-fit)); }
 
 /* Само числото: "4 букви" не се събира, а кутийките и без това показват
-   колко са. */
+   колко са. Като значка, не като блед надпис - в тъмна лента сивото число
+   отляво просто изчезваше и редовете изглеждаха като едно петно. */
 #stage.band .group-label {
-  flex: 0 0 calc(30px * var(--slot-fit));
-  font-size: calc(21px * var(--slot-fit));
+  flex: 0 0 calc(34px * var(--slot-fit));
+  width: calc(34px * var(--slot-fit));
+  height: calc(34px * var(--slot-fit));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(20px * var(--slot-fit));
+  font-weight: 800;
+  color: var(--accent-soft);
+  text-align: center;
+  background: rgba(255, 210, 63, 0.12);
+  border: 2px solid rgba(255, 210, 63, 0.30);
+  border-radius: 50%;
 }
 
 #stage.band .group-words { gap: calc(8px * var(--slot-fit)) calc(30px * var(--slot-fit)); }

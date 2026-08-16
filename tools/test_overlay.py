@@ -419,7 +419,8 @@ async def main():
         total_text = await page.evaluate(
             "document.getElementById('im-total-rows').textContent")
         check("изкачването се отбелязва със стрелка", "▲" in total_text, total_text[:90])
-        check("който се е качил, е първи", total_text.strip().startswith("1.Тошко"),
+        # Мястото вече е значка с голо число, без точка след него.
+        check("който се е качил, е първи", total_text.strip().startswith("1Тошко"),
               total_text[:60])
 
         level_text = await page.evaluate(
@@ -471,6 +472,33 @@ async def main():
         check("бутонът е блед, за да не личи на стрийма",
               float(await page.evaluate(
                   "getComputedStyle(document.getElementById('mute-btn')).opacity")) < 0.6)
+
+        # Поредицата качва височината чрез playbackRate. Браузърите обаче
+        # по подразбиране ПАЗЯТ височината при смяна на скоростта - тогава
+        # звукът просто свири по-бързо на същия тон и целият ефект липсва.
+        pitch = await page.evaluate("""
+          (function () {
+            var items = window.dumichkiSounds.pool.word.items;
+            return items.map(function (a) { return a.preservesPitch; });
+          })()
+        """)
+        check("звукът се качва по височина, не само по скорост",
+              all(value is False for value in pitch), pitch)
+
+        rates = await page.evaluate("""
+          (function () {
+            var s = window.dumichkiSounds;
+            var out = [];
+            [1, 3, 8, 40].forEach(function (streak) {
+              out.push(Math.min(s.cfg.pitchMax,
+                       1 + Math.max(0, streak - 1) * s.cfg.pitchStep));
+            });
+            return out;
+          })()
+        """)
+        check("височината расте с поредицата и има таван",
+              rates[0] == 1 and rates[1] > rates[0] and rates[2] > rates[1]
+              and rates[3] <= 1.9001, rates)
 
         async def sound_on():
             return await page.evaluate("window.dumichkiSounds.enabled")
