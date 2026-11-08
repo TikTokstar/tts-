@@ -48,14 +48,23 @@ if not exist ".venv\Scripts\python.exe" (
 set "VENV_PY=.venv\Scripts\python.exe"
 
 rem --- 3. Пакети -----------------------------------------------------
-rem Инсталираме при първо пускане. За да ги обновиш после, изтрий
-rem файла .venv\.installed и пусни run.bat пак.
+rem Инсталира, когато requirements.txt се различава от това, което е
+rem инсталирано. Така "git pull" с нови версии стига до средата сама.
+rem (Преди се инсталираше само веднъж и после никога не се обновяваше.)
 set "NEED_INSTALL="
 if defined FRESH set "NEED_INSTALL=1"
-if not exist ".venv\.installed" set "NEED_INSTALL=1"
+if not exist ".venv\requirements.installed.txt" set "NEED_INSTALL=1"
+if not defined NEED_INSTALL (
+    fc /b "requirements.txt" ".venv\requirements.installed.txt" >nul 2>&1
+    if errorlevel 1 set "NEED_INSTALL=1"
+)
 
 if defined NEED_INSTALL (
-    echo   Инсталирам пакетите... ^(еднократно^)
+    if defined FRESH (
+        echo   Инсталирам пакетите... ^(еднократно^)
+    ) else (
+        echo   Има нови версии на пакетите — обновявам...
+    )
     echo.
     "%VENV_PY%" -m pip install --upgrade pip --quiet
     "%VENV_PY%" -m pip install -r requirements.txt
@@ -66,7 +75,8 @@ if defined NEED_INSTALL (
         pause
         exit /b 1
     )
-    echo готово> ".venv\.installed"
+    copy /y "requirements.txt" ".venv\requirements.installed.txt" >nul
+    if exist ".venv\.installed" del ".venv\.installed" >nul
     echo.
     echo   Пакетите са готови.
     echo.
@@ -77,11 +87,14 @@ if not exist ".env" (
     if exist ".env.example" copy ".env.example" ".env" >nul
 )
 
-rem --- 5. Бърза проверка на транслитерацията -------------------------
-echo   Проверявам транслитерацията...
-"%VENV_PY%" -c "import translit; assert translit.transliterate('kak si be')=='как си бе'; print('   OK: kak si be -> как си бе')"
+rem --- 5. Проверка на библиотеките -----------------------------------
+rem Проверява точно нещата, които ботът ползва от TikTokLive и edge-tts.
+echo   Проверявам библиотеките...
+"%VENV_PY%" main.py --check
 if errorlevel 1 (
-    echo   [ВНИМАНИЕ] Проверката не мина, но продължавам.
+    echo.
+    echo   [ВНИМАНИЕ] Проверката не мина. Ботът тръгва, но нещо може да не
+    echo   работи. Пусни obnovi.bat или ми прати горния текст.
 )
 echo.
 

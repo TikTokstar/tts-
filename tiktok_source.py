@@ -32,6 +32,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from types import SimpleNamespace
 from typing import Any, Callable, List, Optional
 from urllib.parse import urlparse
 
@@ -215,6 +216,42 @@ class Backoff:
 # ---------------------------------------------------------------------------
 
 
+class _NeverRaised(Exception):
+    """Заместител за грешка, която инсталираната TikTokLive не познава.
+
+    Никой не я вдига, така че `except _NeverRaised` просто не съвпада —
+    вместо `except errors.ЛипсващоИме` да гръмне с AttributeError.
+    """
+
+
+def tiktok_errors() -> SimpleNamespace:
+    """Класовете грешки на TikTokLive, устойчиво на преименувания.
+
+    Имената се сменят между версиите: в 7.0 WebcastBlocked200Error стана
+    WebcastBlockedError (и вече покрива и отказ с 400). Затова за всяка
+    грешка се пробват няколко имена, най-новото първо.
+    """
+    from TikTokLive.client import errors as tt
+
+    def pick(*names: str) -> type:
+        for name in names:
+            cls = getattr(tt, name, None)
+            if isinstance(cls, type) and issubclass(cls, BaseException):
+                return cls
+        log.debug("TikTokLive няма грешка %s — пропускам я", "/".join(names))
+        return _NeverRaised
+
+    return SimpleNamespace(
+        user_not_found=pick("UserNotFoundError"),
+        user_offline=pick("UserOfflineError"),
+        age_restricted=pick("AgeRestrictedError"),
+        rate_limit=pick("SignatureRateLimitError"),
+        sign_api=pick("SignAPIError"),
+        blocked=pick("WebcastBlockedError", "WebcastBlocked200Error"),
+        already_connected=pick("AlreadyConnectedError"),
+    )
+
+
 class TikTokSource(EventSource):
     """Чатът на TikTok Live през пакета TikTokLive."""
 
@@ -374,7 +411,7 @@ class TikTokSource(EventSource):
                 await asyncio.sleep(delay)
 
     async def _connect_once(self) -> None:
-        from TikTokLive.client import errors as tt_errors
+        err = tiktok_errors()
 
         self._set_state(
             SourceState.CONNECTING, f"Свързвам се с @{self.username}..."
@@ -384,7 +421,7 @@ class TikTokSource(EventSource):
 
         try:
             live = await self._client.is_live()
-        except tt_errors.UserNotFoundError:
+        except err.user_not_found:
             self._running = False
             self._set_state(
                 SourceState.ERROR,
@@ -413,7 +450,7 @@ class TikTokSource(EventSource):
             )
             await task  # държи, докато връзката е жива
 
-        except tt_errors.UserNotFoundError:
+        except err.user_not_found:
             self._running = False
             self._set_state(
                 SourceState.ERROR,
@@ -421,7 +458,7 @@ class TikTokSource(EventSource):
             )
             return
 
-        except tt_errors.UserOfflineError:
+        except err.user_offline:
             self._set_state(
                 SourceState.WAITING,
                 f"@{self.username} не е на живо. Проверявам пак след "
@@ -430,7 +467,7 @@ class TikTokSource(EventSource):
             await asyncio.sleep(self.retry_seconds)
             return
 
-        except tt_errors.AgeRestrictedError:
+        except err.age_restricted:
             self._running = False
             self._set_state(
                 SourceState.ERROR,
@@ -439,7 +476,7 @@ class TikTokSource(EventSource):
             )
             return
 
-        except tt_errors.SignatureRateLimitError as exc:
+        except err.rate_limit as exc:
             wait = self._rate_limit_wait(exc)
             self._set_state(
                 SourceState.RECONNECTING,
@@ -448,7 +485,7 @@ class TikTokSource(EventSource):
             await asyncio.sleep(wait)
             return
 
-        except tt_errors.SignAPIError as exc:
+        except err.sign_api as exc:
             delay = self._backoff.next_delay()
             self._set_state(
                 SourceState.RECONNECTING,
@@ -458,7 +495,7 @@ class TikTokSource(EventSource):
             await asyncio.sleep(delay)
             return
 
-        except tt_errors.WebcastBlocked200Error:
+        except err.blocked:
             delay = max(self._backoff.next_delay(), self.blocked_min_wait)
             self._set_state(
                 SourceState.RECONNECTING,
@@ -468,7 +505,7 @@ class TikTokSource(EventSource):
             await asyncio.sleep(delay)
             return
 
-        except tt_errors.AlreadyConnectedError:
+        except err.already_connected:
             await self._close_client()
             await asyncio.sleep(1.0)
             return

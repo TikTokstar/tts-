@@ -601,6 +601,83 @@ class TTSBot:
 # ---------------------------------------------------------------------------
 
 
+def self_check() -> int:
+    """Проверява, че инсталираните библиотеки имат всичко, което ползваме.
+
+    Пуска се след всяко обновяване. Ако нова версия на TikTokLive или
+    edge-tts е махнала или преименувала нещо, това се хваща ТУК, а не на
+    живо в стрийма — и obnovi.bat връща старите версии.
+    """
+    import inspect
+    from importlib.metadata import PackageNotFoundError, version
+
+    problems: List[str] = []
+
+    print("  Версии:")
+    for pkg in ("edge-tts", "TikTokLive", "fastapi", "uvicorn", "sounddevice", "miniaudio"):
+        try:
+            print(f"    {pkg:<12} {version(pkg)}")
+        except PackageNotFoundError:
+            problems.append(f"липсва пакетът {pkg}")
+
+    # Транслитерацията
+    try:
+        got = translit.transliterate("kak si be")
+        if got != "как си бе":
+            problems.append(f"транслитерацията върна {got!r}")
+    except Exception as exc:
+        problems.append(f"транслитерацията гръмна: {exc}")
+
+    # edge-tts — точно това, което вика tts.py
+    try:
+        import edge_tts
+
+        params = inspect.signature(edge_tts.Communicate.__init__).parameters
+        for name in ("voice", "rate", "pitch", "volume"):
+            if name not in params:
+                problems.append(f"edge-tts: Communicate няма параметър {name}")
+        if not hasattr(edge_tts.Communicate, "stream"):
+            problems.append("edge-tts: няма Communicate.stream")
+        if not hasattr(edge_tts, "list_voices"):
+            problems.append("edge-tts: няма list_voices")
+    except Exception as exc:
+        problems.append(f"edge-tts не се зарежда: {exc}")
+
+    # TikTokLive — точно това, което вика tiktok_source.py
+    try:
+        from TikTokLive import TikTokLiveClient
+        from TikTokLive.events import CommentEvent, DisconnectEvent, LiveEndEvent  # noqa: F401
+
+        for name in ("start", "is_live", "disconnect", "add_listener", "connected"):
+            if not hasattr(TikTokLiveClient, name):
+                problems.append(f"TikTokLive: клиентът няма {name}")
+        if "fetch_live_check" not in inspect.signature(TikTokLiveClient.start).parameters:
+            problems.append("TikTokLive: start() няма fetch_live_check")
+
+        from tiktok_source import _NeverRaised, tiktok_errors
+
+        for key, cls in vars(tiktok_errors()).items():
+            if cls is _NeverRaised:
+                problems.append(f"TikTokLive: липсва грешката за '{key}'")
+    except Exception as exc:
+        problems.append(f"TikTokLive не се зарежда: {exc}")
+
+    # Панелът
+    try:
+        import panel.app  # noqa: F401
+    except Exception as exc:
+        problems.append(f"панелът не се зарежда: {exc}")
+
+    print()
+    if problems:
+        print("  ПРОБЛЕМИ:")
+        for item in problems:
+            print(f"    - {item}")
+        return 1
+    print("  Всичко е наред.")
+    return 0
+
+
 def _setup_logging(verbose: bool) -> None:
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
@@ -702,7 +779,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--console", action="store_true", help="без TikTok, чете от конзолата")
     parser.add_argument("--no-panel", action="store_true", help="без уеб панел")
     parser.add_argument("-v", "--verbose", action="store_true", help="подробен дневник")
+    parser.add_argument(
+        "--check", action="store_true",
+        help="само провери дали библиотеките имат нужното и излез",
+    )
     args = parser.parse_args(argv)
+
+    if args.check:
+        return self_check()
 
     _setup_logging(args.verbose)
     try:

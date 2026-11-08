@@ -345,3 +345,48 @@ def test_start_rejects_bad_username():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+# ---------------------------------------------------------------------------
+# Устойчивост на обновяване на TikTokLive
+# ---------------------------------------------------------------------------
+
+
+def test_error_resolver_finds_renamed_blocked_error():
+    """В 7.0 WebcastBlocked200Error стана WebcastBlockedError."""
+    err = ts.tiktok_errors()
+    assert err.blocked is not ts._NeverRaised
+    assert err.blocked.__name__ in ("WebcastBlockedError", "WebcastBlocked200Error")
+
+
+def test_error_resolver_survives_missing_name(monkeypatch):
+    """Ако нова версия махне грешка, `except` не бива да гърми."""
+    from TikTokLive.client import errors as tt
+
+    monkeypatch.delattr(tt, "AgeRestrictedError")
+    err = ts.tiktok_errors()
+    assert err.age_restricted is ts._NeverRaised
+
+    # и истински except с нея не вдига AttributeError
+    try:
+        raise RuntimeError("друго")
+    except err.age_restricted:
+        pytest.fail("_NeverRaised не бива да съвпада с нищо")
+    except RuntimeError:
+        pass
+
+
+def test_self_check_passes_on_installed_versions():
+    import main
+
+    assert main.self_check() == 0
+
+
+def test_self_check_catches_broken_library(monkeypatch, capsys):
+    """Точно това пази обновяването: липсва нещо -> проверката пада."""
+    import main
+    from TikTokLive.client import errors as tt
+
+    monkeypatch.delattr(tt, "UserOfflineError")
+    assert main.self_check() == 1
+    assert "user_offline" in capsys.readouterr().out
