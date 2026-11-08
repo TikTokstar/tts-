@@ -293,33 +293,96 @@ def build_app(bot) -> FastAPI:
     return app
 
 
-async def serve_panel(bot) -> None:
+def panel_url(host: str, port: int) -> str:
+    shown = "localhost" if host in ("127.0.0.1", "0.0.0.0", "") else host
+    return f"http://{shown}:{port}"
+
+
+def port_is_free(host: str, port: int) -> bool:
+    """Може ли точно този адрес да се заеме в момента."""
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        try:
+            probe.bind((host, port))
+        except OSError:
+            return False
+    return True
+
+
+def find_running_bot(host: str, port: int, timeout: float = 1.5) -> bool:
+    """Има ли НАШ бот на този порт (а не някоя друга програма)."""
+    import json
+    import urllib.request
+
+    target = "127.0.0.1" if host in ("0.0.0.0", "") else host
+    # Без системен прокси: заявка към localhost не бива да минава през него.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(f"http://{target}:{port}/api/status", timeout=timeout) as res:
+            data = json.loads(res.read().decode("utf-8"))
+    except Exception:
+        return False
+    return isinstance(data, dict) and "state" in data and "label" in data
+
+
+def pick_free_port(host: str, preferred: int, tries: int = 20) -> Optional[int]:
+    """Предпочитаният порт, а ако е зает — следващият свободен."""
+    for port in range(preferred, preferred + tries):
+        if port_is_free(host, port):
+            return port
+    return None
+
+
+async def serve_panel(bot, port: Optional[int] = None) -> None:
     """Пуска uvicorn вътре в текущия цикъл, за да живее заедно с бота."""
     import uvicorn
 
     host = str(bot.config.get("panel.host", "127.0.0.1"))
-    port = int(bot.config.get("panel.port", 8777))
+    port = int(port or bot.config.get("panel.port", 8777))
     app = build_app(bot)
 
     config = uvicorn.Config(
         app, host=host, port=port, log_level="warning", access_log=False
     )
     server = uvicorn.Server(config)
+    shown = panel_url(host, port)
 
-    shown = f"http://{'localhost' if host in ('127.0.0.1', '0.0.0.0') else host}:{port}"
-    print(f"\n  Контролен панел: {shown}\n")
+    async def announce_when_ready() -> None:
+        # Браузърът се отваря чак СЛЕД като портът е наш. Преди се отваряше
+        # предварително — и при зает порт показваше панела на ДРУГ бот,
+        # докато този умираше. Изглеждаше работещо, а не беше.
+        for _ in range(200):
+            if server.started:
+                print(f"\n  Контролен панел: {shown}\n")
+                if bot.config.get("panel.open_browser", True):
+                    try:
+                        import webbrowser
 
-    if bot.config.get("panel.open_browser", True):
-        try:
-            import webbrowser
+                        webbrowser.open(shown)
+                    except Exception:
+                        pass
+                return
+            await asyncio.sleep(0.05)
 
-            webbrowser.open(shown)
-        except Exception:
-            pass
-
+    watcher = asyncio.create_task(announce_when_ready())
     try:
+        # server.serve() се чака ТУК, а не в отделна задача: SystemExit от
+        # отделна задача asyncio го прехвърля право през цикъла и няма как
+        # да се хване. Оттук — може.
         await server.serve()
     except asyncio.CancelledError:
         raise
+    except SystemExit:
+        # uvicorn вика sys.exit(3), когато портът е зает. SystemExit е
+        # BaseException, не Exception — затова старият код го пропускаше и
+        # целият бот падаше с "код 3".
+        log.error(
+            "Панелът не можа да заеме порт %d — друга програма го държи. "
+            "Ботът продължава без панел; горещите клавиши работят.",
+            port,
+        )
     except Exception as exc:
         log.error("Панелът спря: %s", exc)
+    finally:
+        watcher.cancel()

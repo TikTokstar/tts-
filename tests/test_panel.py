@@ -300,3 +300,112 @@ def test_cache_clear_endpoint(client):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+# ---------------------------------------------------------------------------
+# Зает порт / втори пуснат бот
+# ---------------------------------------------------------------------------
+
+import json as _json
+import socket as _socket
+import threading as _threading
+from http.server import BaseHTTPRequestHandler as _Handler
+from http.server import HTTPServer as _HTTPServer
+
+
+def _hold_port():
+    """Заема свободен порт и го държи — като чужда програма."""
+    sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    sock.listen(1)
+    return sock, sock.getsockname()[1]
+
+
+def _fake_server(body: dict):
+    """HTTP сървър, който на /api/status връща body."""
+
+    class H(_Handler):
+        def do_GET(self):
+            raw = _json.dumps(body).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def log_message(self, *a):
+            pass
+
+    srv = _HTTPServer(("127.0.0.1", 0), H)
+    _threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, srv.server_address[1]
+
+
+def test_port_is_free_detects_taken_port():
+    from panel.app import port_is_free
+
+    sock, port = _hold_port()
+    try:
+        assert port_is_free("127.0.0.1", port) is False
+    finally:
+        sock.close()
+
+
+def test_pick_free_port_skips_taken_one():
+    from panel.app import pick_free_port
+
+    sock, port = _hold_port()
+    try:
+        chosen = pick_free_port("127.0.0.1", port)
+        assert chosen is not None and chosen != port
+    finally:
+        sock.close()
+
+
+def test_find_running_bot_recognizes_our_bot():
+    from panel.app import find_running_bot
+
+    srv, port = _fake_server({"state": "idle", "label": "Готов"})
+    try:
+        assert find_running_bot("127.0.0.1", port) is True
+    finally:
+        srv.shutdown()
+
+
+def test_find_running_bot_ignores_other_programs():
+    """Чужда програма на порта НЕ бива да се бърка с нашия бот."""
+    from panel.app import find_running_bot
+
+    srv, port = _fake_server({"нещо": "друго"})
+    try:
+        assert find_running_bot("127.0.0.1", port) is False
+    finally:
+        srv.shutdown()
+
+
+def test_find_running_bot_when_nothing_listens():
+    from panel.app import find_running_bot
+
+    sock, port = _hold_port()
+    sock.close()  # портът вече е свободен — никой не слуша
+    assert find_running_bot("127.0.0.1", port, timeout=0.5) is False
+
+
+def test_taken_port_does_not_kill_the_bot(tmp_path, monkeypatch):
+    """Бъгът от стрийма: uvicorn вика sys.exit(3) при зает порт и целият
+    бот падаше с "код 3". SystemExit е BaseException, затова се изплъзваше
+    от `except Exception`. Сега serve_panel трябва да се върне нормално."""
+    from panel.app import serve_panel
+
+    cfg = Config(path=tmp_path / "config.json")
+    cfg.set("hotkeys.enabled", False, save=False)
+    cfg.set("panel.open_browser", False, save=False)
+    monkeypatch.setattr(main_mod, "VoiceStore", lambda *a, **k: _MemStore())
+    bot = main_mod.TTSBot(config=cfg)
+
+    sock, port = _hold_port()
+    try:
+        # Ако SystemExit се изплъзне, тестът (и pytest) пада тук.
+        asyncio.run(asyncio.wait_for(serve_panel(bot, port=port), timeout=15))
+    finally:
+        sock.close()

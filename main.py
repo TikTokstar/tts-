@@ -619,15 +619,54 @@ async def run(args: argparse.Namespace) -> int:
     except Exception:
         pass
 
-    bot = TTSBot()
+    config = Config.load()
+    host = str(config.get("panel.host", "127.0.0.1"))
+    port = int(config.get("panel.port", 8777))
+
+    # Втори пуснат бот = всяко съобщение се чете ДВА пъти на стрийма.
+    # Затова, ако ботът вече работи, вторият само отваря неговия панел.
+    try:
+        from panel.app import find_running_bot, panel_url
+
+        if find_running_bot(host, port):
+            url = panel_url(host, port)
+            print()
+            print("  Ботът ВЕЧЕ работи в друг прозорец.")
+            print(f"  Отварям панела му: {url}")
+            print("  (Този прозорец може да се затвори.)")
+            print()
+            if not args.no_panel:
+                try:
+                    import webbrowser
+
+                    webbrowser.open(url)
+                except Exception:
+                    pass
+            return 0
+    except ImportError:
+        pass
+
+    bot = TTSBot(config=config)
     await bot.start()
 
     panel_task = None
     if not args.no_panel:
         try:
-            from panel.app import serve_panel
+            from panel.app import pick_free_port, serve_panel
 
-            panel_task = asyncio.create_task(serve_panel(bot))
+            free = pick_free_port(host, port)
+            if free is None:
+                log.error(
+                    "Няма свободен порт за панела (%d-%d). Ботът работи без него.",
+                    port, port + 19,
+                )
+            else:
+                if free != port:
+                    log.warning(
+                        "Порт %d е зает от друга програма — панелът е на %d.",
+                        port, free,
+                    )
+                panel_task = asyncio.create_task(serve_panel(bot, port=free))
         except Exception as exc:
             log.warning("Панелът не тръгна (%s) — продължавам без него.", exc)
 
